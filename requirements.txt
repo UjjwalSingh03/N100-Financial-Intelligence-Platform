@@ -1,0 +1,32 @@
+# Data ingestion & processing
+pandas>=2.2,<3
+numpy>=2.0,<3
+openpyxl>=3.1,<4
+python-dateutil>=2.9,<3
+pytz>=2024.1
+
+# Database
+SQLAlchemy>=2.0,<3
+
+# Analytics
+scipy>=1.13,<2
+scikit-learn>=1.5,<2
+statsmodels>=0.14,<1
+
+# Configuration / CLI
+python-dotenv>=1.0,<2
+PyYAML>=6.0,<7
+click>=8.1,<9
+typer>=0.12,<1
+rich>=13.7,<15
+
+# Testing / quality
+pytest>=8.2,<9
+pytest-cov>=5.0,<8
+ruff>=0.6,<1
+
+# Visualization / notebooks
+plotly>=5.22,<7
+seaborn>=0.13,<1
+matplotlib>=3.9,<4
+jupyter>=1.0,<2
