@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Jupyter
+.ipynb_checkpoints/
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated outputs
+output/*
+!output/.gitkeep
+
+data/processed/*
+!data/processed/.gitkeep
+
+# Logs
+*.log
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.coverage.*
+coverage.xml
+
+# IDE / editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+# Temporary files
+*.tmp
+*.temp
