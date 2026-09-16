@@ -21,6 +21,11 @@ Implemented the Excel ingestion foundation and normalization utilities required 
 - Added `normalize_ticker()` for trimming, uppercase conversion, exchange-prefix removal, suffix cleanup, and whitespace normalization.
 - Added **39 parameterized/unit test cases** covering valid, invalid, missing, and edge-case year/ticker values.
 
+**Day 02 files:**
+- `src/etl/loader.py`
+- `src/etl/normaliser.py`
+- `tests/etl/test_normaliser.py`
+
 ## Project structure
 
 ```text
