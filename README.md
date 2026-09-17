@@ -10,44 +10,79 @@ Established the Python project structure, dependency configuration, environment 
 
 ### Day 02 — Excel Loader & Normaliser
 
-Implemented the Excel ingestion foundation and normalization utilities required for the N100 financial-data pipeline.
+Implemented the Excel ingestion foundation against the actual Bluestock N100 workbook layout.
 
-**Completed:**
-- Implemented `src/etl/loader.py` to discover and load Excel workbooks from `data/raw/`.
-- Added validation for supported Excel file extensions and missing source files.
-- Removed fully blank rows and columns during ingestion.
-- Standardized column names by trimming whitespace.
-- Added `normalize_year()` for calendar years, FY notation, financial-year ranges, and date-like values.
-- Added `normalize_ticker()` for trimming, uppercase conversion, exchange-prefix removal, suffix cleanup, and whitespace normalization.
-- Added **39 parameterized/unit test cases** covering valid, invalid, missing, and edge-case year/ticker values.
+**Completed and corrected:**
+- `src/etl/loader.py` now reads Excel workbooks with `header=None` and detects the real schema row. This fixes the supplied workbooks where a descriptive title row appears before the headers.
+- Loader removes fully blank rows and columns and trims column names.
+- Loader validates source-file existence and supported Excel extensions.
+- `src/etl/normaliser.py` provides `normalize_year()` for calendar years, `FY` notation, financial-year ranges, and date-like values such as `Mar 2024`.
+- `normalize_ticker()` handles whitespace, case, NSE/BSE prefixes, and `.NS`/`.BO` suffixes without altering the identifier itself.
+- Added loader tests for title-row detection, blank-row/column cleanup, missing files, unsupported extensions, and deterministic discovery.
+- Existing normaliser tests cover **39 year/ticker cases**.
+
+**Actual 12 logical source workbooks:**
+1. `companies.xlsx`
+2. `profitandloss.xlsx`
+3. `balancesheet.xlsx`
+4. `cashflow.xlsx`
+5. `analysis.xlsx`
+6. `documents.xlsx`
+7. `prosandcons.xlsx`
+8. `sectors.xlsx`
+9. `stock_prices.xlsx`
+10. `financial_ratios.xlsx`
+11. `market_cap.xlsx`
+12. `peer_groups.xlsx`
+
+See `data/raw/README.md` for the source mapping and the important workbook-layout notes.
+
+### Day 03 — Schema Validator & 16 DQ Rules
+
+Implemented and corrected the validation layer so the rules use the **actual column names and relationships in the supplied Excel files**.
+
+**Completed and corrected:**
+- `src/etl/validator.py` implements DQ-01 through DQ-16 with structured `ValidationFailure` records.
+- **DQ-01:** physical `id` primary-key uniqueness/missing-value check.
+- **DQ-02:** `(company_id, year)` uniqueness/missing-value check for annual datasets.
+- **DQ-03:** foreign keys correctly reference `companies.id`; the supplied data uses ticker symbols such as `ABB` as company IDs.
+- **DQ-04:** balance-sheet reconciliation correctly calculates equity as `equity_capital + reserves` when using the supplied schema, with a 1% tolerance.
+- **DQ-05:** OPM validation correctly uses the supplied `opm_percentage` column.
+- **DQ-06:** sales must be positive.
+- **DQ-07:** tax percentage range validation.
+- **DQ-08:** EPS sanity validation.
+- **DQ-09/DQ-10:** dividend-payout validation for negative and out-of-range values.
+- **DQ-11:** company website validation.
+- **DQ-12:** missing EPS detection.
+- **DQ-13:** non-positive total-assets detection.
+- **DQ-14:** missing net-profit/PAT detection.
+- **DQ-15:** non-positive stock close-price detection.
+- **DQ-16:** invalid/missing stock-price date detection.
+- Fixed a validator bug where generic numeric coercion prevented URL/date checks and missing EPS/PAT checks from working correctly.
+- Added tests using the real workbook field names and relationships.
+- `output/validation_failures.csv` remains the generated validation-output location; actual findings should be produced only after running the validator against the uploaded source data.
 
 **Day 02 files:**
 - `src/etl/loader.py`
 - `src/etl/normaliser.py`
+- `tests/etl/test_loader.py`
 - `tests/etl/test_normaliser.py`
-
-### Day 03 — Schema Validator & 16 DQ Rules
-
-Implemented the Sprint 1 data-quality validation foundation covering DQ-01 through DQ-16.
-
-**Completed:**
-- Added `src/etl/validator.py` with deterministic DQ-01–DQ-16 validation rules.
-- Classified primary-key and foreign-key integrity failures as **CRITICAL**.
-- Added **WARNING** checks for OPM consistency, balance-sheet reconciliation, and positive sales.
-- Added additional financial-domain sanity checks for tax rate, EPS, dividends, URL format, assets, PAT, stock prices, and dates.
-- Added `tests/etl/test_validator.py` covering PK, composite-key, FK, balance, OPM, sales, optional rules, and CSV output behavior.
-- Added `output/validation_failures.csv` as the validation-report output template.
+- `data/raw/README.md`
 
 **Day 03 files:**
 - `src/etl/validator.py`
 - `tests/etl/test_validator.py`
 - `output/validation_failures.csv`
 
+## Important source-data note
+
+The uploaded Excel files are the **source inputs** for this project. They are not automatically committed to GitHub by the ETL code. The repository documents the required filenames in `data/raw/README.md`; place the actual workbooks in `data/raw/` locally before running the pipeline.
+
 ## Project structure
 
 ```text
 data/
-  raw/          # Source Excel files
+  raw/          # 12 source Excel inputs
   processed/    # Cleaned/intermediate data
 
 db/             # SQLite schema and database assets
@@ -67,7 +102,7 @@ pip install -r requirements.txt
 ```
 
 3. Copy `.env.example` to `.env` and adjust local settings if required.
-4. Put source Excel files in `data/raw/`.
+4. Place the 12 source Excel workbooks in `data/raw/`.
 
 ## Useful commands
 
