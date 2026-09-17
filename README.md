@@ -26,6 +26,23 @@ Implemented the Excel ingestion foundation and normalization utilities required 
 - `src/etl/normaliser.py`
 - `tests/etl/test_normaliser.py`
 
+### Day 03 — Schema Validator & 16 DQ Rules
+
+Implemented the Sprint 1 data-quality validation foundation covering DQ-01 through DQ-16.
+
+**Completed:**
+- Added `src/etl/validator.py` with deterministic DQ-01–DQ-16 validation rules.
+- Classified primary-key and foreign-key integrity failures as **CRITICAL**.
+- Added **WARNING** checks for OPM consistency, balance-sheet reconciliation, and positive sales.
+- Added additional financial-domain sanity checks for tax rate, EPS, dividends, URL format, assets, PAT, stock prices, and dates.
+- Added `tests/etl/test_validator.py` covering PK, composite-key, FK, balance, OPM, sales, optional rules, and CSV output behavior.
+- Added `output/validation_failures.csv` as the validation-report output template.
+
+**Day 03 files:**
+- `src/etl/validator.py`
+- `tests/etl/test_validator.py`
+- `output/validation_failures.csv`
+
 ## Project structure
 
 ```text
@@ -62,4 +79,4 @@ make clean
 
 ## Next step
 
-**Day 03 — Schema Validator:** implement DQ-01 through DQ-16 validation rules, generate `validation_failures.csv`, and resolve CRITICAL data-quality failures.
+**Day 04 — SQLite Schema:** implement `db/schema.sql`, create the SQLite database structure, define PK/FK relationships, and enable foreign-key enforcement.
