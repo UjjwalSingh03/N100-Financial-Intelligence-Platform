@@ -13,13 +13,12 @@ Established the Python project structure, dependency configuration, environment 
 Implemented the Excel ingestion foundation against the actual Bluestock N100 workbook layout.
 
 **Completed and corrected:**
-- `src/etl/loader.py` now reads Excel workbooks with `header=None` and detects the real schema row. This fixes the supplied workbooks where a descriptive title row appears before the headers.
+- `src/etl/loader.py` now reads Excel workbooks with `header=None` and detects the real schema row.
 - Loader removes fully blank rows and columns and trims column names.
 - Loader validates source-file existence and supported Excel extensions.
-- `src/etl/normaliser.py` provides `normalize_year()` for calendar years, `FY` notation, financial-year ranges, and date-like values such as `Mar 2024`.
-- `normalize_ticker()` handles whitespace, case, NSE/BSE prefixes, and `.NS`/`.BO` suffixes without altering the identifier itself.
-- Added loader tests for title-row detection, blank-row/column cleanup, missing files, unsupported extensions, and deterministic discovery.
-- Existing normaliser tests cover **39 year/ticker cases**.
+- `src/etl/normaliser.py` provides `normalize_year()` for calendar years, `FY` notation, financial-year ranges, and date-like values.
+- `normalize_ticker()` handles whitespace, case, NSE/BSE prefixes, and `.NS`/`.BO` suffixes.
+- Added loader tests and the existing normaliser suite covers 39 year/ticker cases.
 
 **Actual 12 logical source workbooks:**
 1. `companies.xlsx`
@@ -35,32 +34,19 @@ Implemented the Excel ingestion foundation against the actual Bluestock N100 wor
 11. `market_cap.xlsx`
 12. `peer_groups.xlsx`
 
-See `data/raw/README.md` for the source mapping and the important workbook-layout notes.
+See `data/raw/README.md` for source mapping and workbook-layout notes.
 
 ### Day 03 — Schema Validator & 16 DQ Rules
 
-Implemented and corrected the validation layer so the rules use the **actual column names and relationships in the supplied Excel files**.
+Implemented and corrected the validation layer so the rules use the documented source column names and relationships.
 
-**Completed and corrected:**
+**Completed:**
 - `src/etl/validator.py` implements DQ-01 through DQ-16 with structured `ValidationFailure` records.
-- **DQ-01:** physical `id` primary-key uniqueness/missing-value check.
-- **DQ-02:** `(company_id, year)` uniqueness/missing-value check for annual datasets.
-- **DQ-03:** foreign keys correctly reference `companies.id`; the supplied data uses ticker symbols such as `ABB` as company IDs.
-- **DQ-04:** balance-sheet reconciliation correctly calculates equity as `equity_capital + reserves` when using the supplied schema, with a 1% tolerance.
-- **DQ-05:** OPM validation correctly uses the supplied `opm_percentage` column.
-- **DQ-06:** sales must be positive.
-- **DQ-07:** tax percentage range validation.
-- **DQ-08:** EPS sanity validation.
-- **DQ-09/DQ-10:** dividend-payout validation for negative and out-of-range values.
-- **DQ-11:** company website validation.
-- **DQ-12:** missing EPS detection.
-- **DQ-13:** non-positive total-assets detection.
-- **DQ-14:** missing net-profit/PAT detection.
-- **DQ-15:** non-positive stock close-price detection.
-- **DQ-16:** invalid/missing stock-price date detection.
-- Fixed a validator bug where generic numeric coercion prevented URL/date checks and missing EPS/PAT checks from working correctly.
-- Added tests using the real workbook field names and relationships.
-- `output/validation_failures.csv` remains the generated validation-output location; actual findings should be produced only after running the validator against the uploaded source data.
+- CRITICAL checks cover primary-key and foreign-key integrity.
+- WARNING checks cover Balance Sheet reconciliation, OPM, and positive sales.
+- Added financial-data checks for tax rate, EPS, dividends, company URLs, total assets, PAT, stock prices, and dates.
+- Added tests using the documented workbook field names and relationships.
+- `output/validation_failures.csv` is the generated validation-output location.
 
 **Day 02 files:**
 - `src/etl/loader.py`
@@ -74,9 +60,24 @@ Implemented and corrected the validation layer so the rules use the **actual col
 - `tests/etl/test_validator.py`
 - `output/validation_failures.csv`
 
+### Day 04 — SQLite Database Schema
+
+Implemented the SQLite schema foundation in `db/schema.sql`.
+
+**Completed:**
+- Added the logical tables required by the supplied data model: `companies`, `profitandloss`, `balancesheet`, `cashflow`, `analysis`, `documents`, `prosandcons`, `sectors`, `stock_prices`, `financial_ratios`, and `peer_groups`.
+- Defined primary keys for all tables.
+- Defined foreign keys from child tables to `companies.id`.
+- Added uniqueness constraints for annual `(company_id, year)` records and daily `(company_id, price_date)` records where applicable.
+- Added indexes for common company/year and company/date lookups.
+- Enabled SQLite foreign-key enforcement with `PRAGMA foreign_keys = ON`.
+- Kept all 11 logical entities because the supplied Sprint 1 text says “10 tables” but separately lists 11 table names; this avoids silently dropping `peer_groups` or another required domain.
+
+> **SQLite note:** `PRAGMA foreign_keys = ON` must be enabled on each SQLite connection. The schema includes it, and the application loader should execute it immediately after opening the connection.
+
 ## Important source-data note
 
-The uploaded Excel files are the **source inputs** for this project. They are not automatically committed to GitHub by the ETL code. The repository documents the required filenames in `data/raw/README.md`; place the actual workbooks in `data/raw/` locally before running the pipeline.
+The uploaded Excel files are the source inputs for this project. They are not automatically committed to GitHub by the ETL code. The repository documents the required filenames in `data/raw/README.md`; place the actual workbooks in `data/raw/` locally before running the pipeline.
 
 ## Project structure
 
@@ -114,4 +115,4 @@ make clean
 
 ## Next step
 
-**Day 04 — SQLite Schema:** implement `db/schema.sql`, create the SQLite database structure, define PK/FK relationships, and enable foreign-key enforcement.
+**Day 05 — Full Data Load:** load all 12 source workbooks into SQLite, generate `output/load_audit.csv`, and verify row counts and foreign-key integrity.
