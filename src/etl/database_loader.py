@@ -223,8 +223,8 @@ def _records(table: str, source: pd.DataFrame, valid_companies: set[str]) -> tup
                             "id": int(row["id"]) * 10 + index,
                             "company_id": row["company_id"],
                             "metric_name": metric,
-                            "metric_value": None,
-                            "metric_year": None,
+                            "metric_value": row[metric],
+                            "metric_year": _normalise_year(row.get("year")) if pd.notna(row.get("year")) else None,
                         }
                     )
         return pd.DataFrame(rows), unmapped
@@ -261,6 +261,30 @@ def _records(table: str, source: pd.DataFrame, valid_companies: set[str]) -> tup
     raise ValueError(f"Unsupported table: {table}")
 
 
+def _resolve_source(logical_name: str) -> Path | None:
+    """Resolve a logical dataset name to an exact or uploaded prefixed filename.
+
+    GitHub web uploads can prepend a generated timestamp/identifier to the
+    original workbook name.  The ETL still uses the logical dataset suffix.
+    """
+    exact = RAW_DATA_DIR / logical_name
+    if exact.exists():
+        return exact
+
+    matches = sorted(
+        path for path in RAW_DATA_DIR.glob(f"*{logical_name}")
+        if path.is_file()
+    )
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        return None
+    raise RuntimeError(
+        f"Multiple source files match {logical_name}: "
+        + ", ".join(path.name for path in matches)
+    )
+
+
 def _schema_columns(connection: sqlite3.Connection, table: str) -> list[str]:
     return [row[1] for row in connection.execute(f"PRAGMA table_info({table})").fetchall()]
 
@@ -276,14 +300,17 @@ def load_database() -> pd.DataFrame:
         connection.execute("PRAGMA foreign_keys = ON")
         connection.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
 
-        companies_source = load_excel(RAW_DATA_DIR / "companies.xlsx")
+        companies_path = _resolve_source("companies.xlsx")
+        if companies_path is None:
+            raise FileNotFoundError("Missing source workbook: companies.xlsx")
+        companies_source = load_excel(companies_path)
         companies, _ = _records("companies", companies_source, set())
         companies.to_sql("companies", connection, if_exists="append", index=False)
         valid_companies = set(companies["id"].dropna().astype(str))
 
         audits.append(
             {
-                "source_file": "companies.xlsx",
+                "source_file": companies_path.name,
                 "target_table": "companies",
                 "source_rows": len(companies_source),
                 "loaded_rows": len(companies),
@@ -295,8 +322,8 @@ def load_database() -> pd.DataFrame:
 
         for filename in FILES[1:]:
             table = TABLES[filename]
-            path = RAW_DATA_DIR / filename
-            if not path.exists():
+            path = _resolve_source(filename)
+            if path is None:
                 audits.append(
                     {
                         "source_file": filename,
@@ -325,7 +352,7 @@ def load_database() -> pd.DataFrame:
 
                 audits.append(
                     {
-                        "source_file": filename,
+                        "source_file": path.name,
                         "target_table": table,
                         "source_rows": len(source),
                         "loaded_rows": len(records),
