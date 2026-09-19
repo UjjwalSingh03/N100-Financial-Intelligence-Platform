@@ -55,3 +55,7 @@ dist/
 # Temporary files
 *.tmp
 *.temp
+
+# Source Excel datasets
+# Keep data/raw/*.xlsx files trackable so the 12 source workbooks can be committed.
+# Do not add a data/raw/* ignore rule here.
