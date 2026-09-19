@@ -45,19 +45,22 @@ The schema now contains explicit targets for all 12 source datasets, including `
 
 ### Day 05 — Full Data Load — All 12 Files
 
-Implemented the full SQLite loading pipeline in `src/etl/database_loader.py`.
+Implemented and corrected the full SQLite loading pipeline in `src/etl/database_loader.py`.
 
 **Completed:**
 - Loads all 12 Excel source files from `data/raw/`.
-- Uses the Day 02 Excel loader and year/date normalisation.
-- Loads parent data before dependent data to satisfy foreign-key constraints.
-- Maps all 12 source workbooks to their SQLite target tables.
-- Creates `nifty100.db` from `db/schema.sql` when the loader is run.
-- Enables `PRAGMA foreign_keys = ON` for the SQLite connection.
-- Generates `output/load_audit.csv` with source rows, loaded rows, database rows, and status.
+- Uses the Day 02 Excel loader and handles financial-year formats such as `Dec 2012` and `Mar-13`.
+- Preserves the 92-company master universe from `companies.xlsx`.
+- Filters dependent source rows whose company IDs are not present in the 92-company master so foreign-key integrity is maintained.
+- Deduplicates annual records before inserting into tables with `UNIQUE(company_id, year)`.
+- Maps source-specific columns to the normalized SQLite schema.
+- Reshapes wide supplementary datasets such as analysis, pros/cons, and financial ratios into the target tables.
+- Loads parent data before dependent data.
+- Recreates `nifty100.db` from `db/schema.sql` on each load, preventing stale partial-load rows.
+- Enables `PRAGMA foreign_keys = ON`.
+- Generates `output/load_audit.csv`, including source rows, loaded rows, database rows, unmapped source rows, and status.
 - Performs `PRAGMA foreign_key_check` after loading.
-- Tracks expected row-count ranges for the core datasets: companies = 92, P&L ≈ 1,276, Balance Sheet ≈ 1,312, Cash Flow ≈ 1,187, stock prices = 5,520.
-- Added the `make load` command to run the full database loader.
+- Tracks target row-count ranges for the core datasets.
 
 **Load order:**
 1. Companies
@@ -73,7 +76,7 @@ Implemented the full SQLite loading pipeline in `src/etl/database_loader.py`.
 11. Financial Ratios
 12. Market Cap
 
-> **Execution note:** the actual Excel files are intentionally not committed to GitHub. Run `make load` after placing all 12 source workbooks in `data/raw/`. The resulting audit records the actual counts and FK-check result; expected counts are not claimed as verified until the local source files are loaded.
+> **Execution note:** the actual Excel files are intentionally not committed to GitHub. Run `make load` after placing all 12 source workbooks in `data/raw/`. The generated audit is the source of truth for actual loaded counts and the FK-check result.
 
 ## Important source-data note
 
