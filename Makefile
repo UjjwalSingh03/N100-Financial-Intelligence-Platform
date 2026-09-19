@@ -1,7 +1,7 @@
 .PHONY: load ratios test report dashboard api clean
 
 load:
-	python -m src.etl.loader
+	python -m src.etl.database_loader
 
 ratios:
 	python -m src.etl.loader --ratios
