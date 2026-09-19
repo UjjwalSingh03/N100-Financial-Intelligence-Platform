@@ -1,12 +1,11 @@
--- Sprint 1 Day 04: SQLite database schema
--- The project specification says "10 tables", while the supplied logical
--- table list contains 11 entities. This schema keeps all 11 so no source
--- domain is silently dropped.
+-- Sprint 1 Day 04/05: SQLite database schema
+-- The supplied specification says "10 tables" but its logical source list
+-- contains 12 datasets. All 12 source datasets therefore have explicit targets.
 
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS companies (
-    id INTEGER PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     company_name TEXT NOT NULL,
     ticker TEXT,
     bse_code TEXT,
@@ -19,7 +18,7 @@ CREATE TABLE IF NOT EXISTS companies (
 
 CREATE TABLE IF NOT EXISTS profitandloss (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     year INTEGER NOT NULL,
     sales REAL,
     expenses REAL,
@@ -38,7 +37,7 @@ CREATE TABLE IF NOT EXISTS profitandloss (
 
 CREATE TABLE IF NOT EXISTS balancesheet (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     year INTEGER NOT NULL,
     equity_capital REAL,
     reserves REAL,
@@ -55,7 +54,7 @@ CREATE TABLE IF NOT EXISTS balancesheet (
 
 CREATE TABLE IF NOT EXISTS cashflow (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     year INTEGER NOT NULL,
     cash_from_operating_activity REAL,
     cash_from_investing_activity REAL,
@@ -67,7 +66,7 @@ CREATE TABLE IF NOT EXISTS cashflow (
 
 CREATE TABLE IF NOT EXISTS analysis (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     metric_name TEXT,
     metric_value REAL,
     metric_year INTEGER,
@@ -76,7 +75,7 @@ CREATE TABLE IF NOT EXISTS analysis (
 
 CREATE TABLE IF NOT EXISTS documents (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     document_type TEXT,
     document_url TEXT,
     document_date TEXT,
@@ -85,7 +84,7 @@ CREATE TABLE IF NOT EXISTS documents (
 
 CREATE TABLE IF NOT EXISTS prosandcons (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     item_type TEXT,
     description TEXT,
     FOREIGN KEY (company_id) REFERENCES companies(id)
@@ -93,7 +92,7 @@ CREATE TABLE IF NOT EXISTS prosandcons (
 
 CREATE TABLE IF NOT EXISTS sectors (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     sector TEXT,
     industry TEXT,
     FOREIGN KEY (company_id) REFERENCES companies(id)
@@ -101,7 +100,7 @@ CREATE TABLE IF NOT EXISTS sectors (
 
 CREATE TABLE IF NOT EXISTS stock_prices (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     price_date TEXT NOT NULL,
     open_price REAL,
     high_price REAL,
@@ -114,18 +113,27 @@ CREATE TABLE IF NOT EXISTS stock_prices (
 
 CREATE TABLE IF NOT EXISTS financial_ratios (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     year INTEGER NOT NULL,
     ratio_name TEXT,
     ratio_value REAL,
     FOREIGN KEY (company_id) REFERENCES companies(id)
 );
 
+CREATE TABLE IF NOT EXISTS market_cap (
+    id INTEGER PRIMARY KEY,
+    company_id TEXT NOT NULL,
+    year INTEGER,
+    market_cap REAL,
+    enterprise_value REAL,
+    FOREIGN KEY (company_id) REFERENCES companies(id)
+);
+
 CREATE TABLE IF NOT EXISTS peer_groups (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     peer_group_name TEXT,
-    peer_company_id INTEGER,
+    peer_company_id TEXT,
     FOREIGN KEY (company_id) REFERENCES companies(id),
     FOREIGN KEY (peer_company_id) REFERENCES companies(id)
 );
@@ -135,5 +143,6 @@ CREATE INDEX IF NOT EXISTS idx_bs_company_year ON balancesheet(company_id, year)
 CREATE INDEX IF NOT EXISTS idx_cf_company_year ON cashflow(company_id, year);
 CREATE INDEX IF NOT EXISTS idx_prices_company_date ON stock_prices(company_id, price_date);
 CREATE INDEX IF NOT EXISTS idx_ratios_company_year ON financial_ratios(company_id, year);
+CREATE INDEX IF NOT EXISTS idx_market_cap_company_year ON market_cap(company_id, year);
 
 PRAGMA foreign_keys = ON;
