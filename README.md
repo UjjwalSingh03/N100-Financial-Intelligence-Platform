@@ -13,14 +13,13 @@ Established the Python project structure, dependency configuration, environment 
 Implemented the Excel ingestion foundation against the actual Bluestock N100 workbook layout.
 
 **Completed and corrected:**
-- `src/etl/loader.py` now reads Excel workbooks with `header=None` and detects the real schema row.
-- Loader removes fully blank rows and columns and trims column names.
+- `src/etl/loader.py` detects the real schema row in supplied workbooks.
+- Loader removes fully blank rows/columns and trims column names.
 - Loader validates source-file existence and supported Excel extensions.
-- `src/etl/normaliser.py` provides `normalize_year()` for calendar years, `FY` notation, financial-year ranges, and date-like values.
-- `normalize_ticker()` handles whitespace, case, NSE/BSE prefixes, and `.NS`/`.BO` suffixes.
-- Added loader tests and the existing normaliser suite covers 39 year/ticker cases.
+- `src/etl/normaliser.py` provides `normalize_year()` and `normalize_ticker()`.
+- Added loader and normaliser tests.
 
-**Actual 12 logical source workbooks:**
+**12 source workbooks:**
 1. `companies.xlsx`
 2. `profitandloss.xlsx`
 3. `balancesheet.xlsx`
@@ -34,50 +33,51 @@ Implemented the Excel ingestion foundation against the actual Bluestock N100 wor
 11. `market_cap.xlsx`
 12. `peer_groups.xlsx`
 
-See `data/raw/README.md` for source mapping and workbook-layout notes.
-
 ### Day 03 — Schema Validator & 16 DQ Rules
 
-Implemented and corrected the validation layer so the rules use the documented source column names and relationships.
-
-**Completed:**
-- `src/etl/validator.py` implements DQ-01 through DQ-16 with structured `ValidationFailure` records.
-- CRITICAL checks cover primary-key and foreign-key integrity.
-- WARNING checks cover Balance Sheet reconciliation, OPM, and positive sales.
-- Added financial-data checks for tax rate, EPS, dividends, company URLs, total assets, PAT, stock prices, and dates.
-- Added tests using the documented workbook field names and relationships.
-- `output/validation_failures.csv` is the generated validation-output location.
-
-**Day 02 files:**
-- `src/etl/loader.py`
-- `src/etl/normaliser.py`
-- `tests/etl/test_loader.py`
-- `tests/etl/test_normaliser.py`
-- `data/raw/README.md`
-
-**Day 03 files:**
-- `src/etl/validator.py`
-- `tests/etl/test_validator.py`
-- `output/validation_failures.csv`
+Implemented and corrected DQ-01 through DQ-16 with structured validation failures, PK/FK checks, financial sanity checks, tests, and `output/validation_failures.csv`.
 
 ### Day 04 — SQLite Database Schema
 
-Implemented the SQLite schema foundation in `db/schema.sql`.
+Implemented `db/schema.sql` with primary keys, foreign keys, uniqueness constraints, indexes, and SQLite foreign-key enforcement.
+
+The schema now contains explicit targets for all 12 source datasets, including `market_cap`. The project specification's “10 tables” wording is inconsistent with its source list, so no supplied dataset is silently dropped.
+
+### Day 05 — Full Data Load — All 12 Files
+
+Implemented the full SQLite loading pipeline in `src/etl/database_loader.py`.
 
 **Completed:**
-- Added the logical tables required by the supplied data model: `companies`, `profitandloss`, `balancesheet`, `cashflow`, `analysis`, `documents`, `prosandcons`, `sectors`, `stock_prices`, `financial_ratios`, and `peer_groups`.
-- Defined primary keys for all tables.
-- Defined foreign keys from child tables to `companies.id`.
-- Added uniqueness constraints for annual `(company_id, year)` records and daily `(company_id, price_date)` records where applicable.
-- Added indexes for common company/year and company/date lookups.
-- Enabled SQLite foreign-key enforcement with `PRAGMA foreign_keys = ON`.
-- Kept all 11 logical entities because the supplied Sprint 1 text says “10 tables” but separately lists 11 table names; this avoids silently dropping `peer_groups` or another required domain.
+- Loads all 12 Excel source files from `data/raw/`.
+- Uses the Day 02 Excel loader and year/date normalisation.
+- Loads parent data before dependent data to satisfy foreign-key constraints.
+- Maps all 12 source workbooks to their SQLite target tables.
+- Creates `nifty100.db` from `db/schema.sql` when the loader is run.
+- Enables `PRAGMA foreign_keys = ON` for the SQLite connection.
+- Generates `output/load_audit.csv` with source rows, loaded rows, database rows, and status.
+- Performs `PRAGMA foreign_key_check` after loading.
+- Tracks expected row-count ranges for the core datasets: companies = 92, P&L ≈ 1,276, Balance Sheet ≈ 1,312, Cash Flow ≈ 1,187, stock prices = 5,520.
+- Added the `make load` command to run the full database loader.
 
-> **SQLite note:** `PRAGMA foreign_keys = ON` must be enabled on each SQLite connection. The schema includes it, and the application loader should execute it immediately after opening the connection.
+**Load order:**
+1. Companies
+2. Sectors
+3. Peer groups
+4. Profit & Loss
+5. Balance Sheet
+6. Cash Flow
+7. Analysis
+8. Documents
+9. Pros & Cons
+10. Stock Prices
+11. Financial Ratios
+12. Market Cap
+
+> **Execution note:** the actual Excel files are intentionally not committed to GitHub. Run `make load` after placing all 12 source workbooks in `data/raw/`. The resulting audit records the actual counts and FK-check result; expected counts are not claimed as verified until the local source files are loaded.
 
 ## Important source-data note
 
-The uploaded Excel files are the source inputs for this project. They are not automatically committed to GitHub by the ETL code. The repository documents the required filenames in `data/raw/README.md`; place the actual workbooks in `data/raw/` locally before running the pipeline.
+The uploaded Excel files are source inputs for this project. They are not automatically committed to GitHub by the ETL code. Place the required workbooks in `data/raw/` before running the pipeline.
 
 ## Project structure
 
@@ -86,9 +86,12 @@ data/
   raw/          # 12 source Excel inputs
   processed/    # Cleaned/intermediate data
 
-db/             # SQLite schema and database assets
+db/
+  schema.sql    # SQLite schema
+
+nifty100.db     # Generated SQLite database (local)
 notebooks/      # Exploratory SQL/notebooks
-output/         # Generated reports and validation outputs
+output/         # Generated audit and validation outputs
 src/etl/        # ETL pipeline
 tests/etl/      # ETL tests
 ```
@@ -102,8 +105,13 @@ tests/etl/      # ETL tests
 pip install -r requirements.txt
 ```
 
-3. Copy `.env.example` to `.env` and adjust local settings if required.
-4. Place the 12 source Excel workbooks in `data/raw/`.
+3. Copy `.env.example` to `.env` if required.
+4. Place all 12 source Excel workbooks in `data/raw/`.
+5. Run:
+
+```bash
+make load
+```
 
 ## Useful commands
 
@@ -115,4 +123,4 @@ make clean
 
 ## Next step
 
-**Day 05 — Full Data Load:** load all 12 source workbooks into SQLite, generate `output/load_audit.csv`, and verify row counts and foreign-key integrity.
+**Day 06 — Manual Review & Coverage:** review five random companies, verify year coverage, identify companies with fewer than five years of data, and fix loader issues found during review.
