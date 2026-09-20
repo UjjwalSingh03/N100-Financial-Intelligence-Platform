@@ -1,324 +1,268 @@
-"""Sprint 1 Day 05: robust loader for all 12 Nifty 100 source workbooks.
+"""
+N100 Financial Intelligence Platform — Day 05 loader.
 
-The loader normalises the supplied Bluestock workbooks, preserves the 92-company
-master universe, resolves child-company identifiers against the master company
-aliases, deduplicates annual records before inserting into UNIQUE tables, and
-records unmapped source rows in the audit.
+Loads the 12 source workbooks into SQLite with *enforced* foreign keys.
+
+Day 05 contract:
+  1. Load the 92-company master first.
+  2. Build the canonical company-ID map from it (incl. known alias repairs).
+  3. Detect child records whose company_id is not in the map.
+  4. Do NOT insert orphan records into the fact/dimension tables.
+  5. Report them in load_audit.csv as `unmapped_rows` (+ unmapped_company_ids).
+  6. Quarantine the rejected rows in `unmapped_records` so nothing is lost.
+  7. PRAGMA foreign_key_check must return 0 against a schema that actually
+     declares the FKs — this loader declares them, so the check is meaningful.
+
+Run:  python database_loader.py [--source DIR] [--out DIR]
 """
 
 from __future__ import annotations
 
+import argparse
+import datetime as _dt
+import hashlib
+import os
 import re
 import sqlite3
-from pathlib import Path
+import sys
 
 import pandas as pd
 
-from src.etl.loader import RAW_DATA_DIR, load_excel
-from src.etl.normaliser import normalize_ticker, normalize_year
+# ---------------------------------------------------------------------------
+# Source registry
+# ---------------------------------------------------------------------------
+# header_row: the 7 "core" exports carry a banner line above the real header
+# ("Bluestock Fintech — Nifty 100 | Profit & Loss | 1,276 records"), so their
+# header lives on row index 1. The 5 supplementary files are clean at row 0.
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SCHEMA_PATH = PROJECT_ROOT / "db" / "schema.sql"
-DB_PATH = PROJECT_ROOT / "nifty100.db"
-AUDIT_PATH = PROJECT_ROOT / "output" / "load_audit.csv"
-
-FILES = [
-    "companies.xlsx", "sectors.xlsx", "peer_groups.xlsx", "profitandloss.xlsx",
-    "balancesheet.xlsx", "cashflow.xlsx", "analysis.xlsx", "documents.xlsx",
-    "prosandcons.xlsx", "stock_prices.xlsx", "financial_ratios.xlsx", "market_cap.xlsx",
+SOURCES = [
+    # (table,            filename_contains,   header_row, layer,           expected_source_rows)
+    ("companies",        "companies",         1, "core",          92),
+    ("sectors",          "sectors",           0, "supplementary", 92),
+    ("peer_groups",      "peer_groups",       0, "supplementary", 56),
+    ("analysis",         "analysis",          1, "core",           20),
+    ("pros_and_cons",    "prosandcons",       1, "core",           16),
+    ("documents",        "documents",         1, "core",          1585),
+    ("profit_and_loss",  "profitandloss",     1, "core",          1276),
+    ("balance_sheet",    "balancesheet",      1, "core",          1312),
+    ("cash_flow",        "cashflow",          1, "core",          1187),
+    ("financial_ratios", "financial_ratios",  0, "supplementary", 1184),
+    ("market_cap",       "market_cap",        0, "supplementary", 552),
+    ("stock_prices",     "stock_prices",      0, "supplementary", 5520),
 ]
 
-TABLES = {
-    "companies.xlsx": "companies", "sectors.xlsx": "sectors", "peer_groups.xlsx": "peer_groups",
-    "profitandloss.xlsx": "profitandloss", "balancesheet.xlsx": "balancesheet",
-    "cashflow.xlsx": "cashflow", "analysis.xlsx": "analysis", "documents.xlsx": "documents",
-    "prosandcons.xlsx": "prosandcons", "stock_prices.xlsx": "stock_prices",
-    "financial_ratios.xlsx": "financial_ratios", "market_cap.xlsx": "market_cap",
-}
+MASTER = "companies"
 
-EXPECTED = {
-    "companies": (92, 92), "profitandloss": (1100, 1350), "balancesheet": (1000, 1375),
-    "cashflow": (1000, 1250), "stock_prices": (5520, 5520),
-}
+# Known ticker aliases in the source data -> canonical companies.id.
+# AGTL is a transposition of ATGL (Adani Total Gas); ATGL is in the master and
+# has no cash_flow rows of its own, so the repair cannot collide.
+ALIASES = {"AGTL": "ATGL"}
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
-def _canon(value: object) -> str:
-    return str(value).strip().lower().replace("-", "_").replace(" ", "_")
+def norm_col(c) -> str:
+    c = re.sub(r"[^0-9a-z]+", "_", str(c).strip().lower())
+    return c.strip("_")
 
 
-def _normalise_company_id(value: object) -> str | None:
-    """Normalise ticker/code-like company identifiers consistently."""
-    if value is None or pd.isna(value):
-        return None
-    text = str(value).strip()
-    if not text:
-        return None
-    # Excel can turn numeric identifiers into values such as 500325.0.
-    if re.fullmatch(r"\d+\.0", text):
-        text = text[:-2]
-    normalized = normalize_ticker(text)
-    return normalized or None
+def sql_type(series: pd.Series) -> str:
+    if pd.api.types.is_bool_dtype(series):
+        return "INTEGER"
+    if pd.api.types.is_integer_dtype(series):
+        return "INTEGER"
+    if pd.api.types.is_float_dtype(series):
+        return "REAL"
+    return "TEXT"
 
 
-def _normalise_alias(value: object) -> str | None:
-    """Create a case/whitespace-insensitive alias key."""
-    if value is None or pd.isna(value):
-        return None
-    text = str(value).strip()
-    if not text:
-        return None
-    if re.fullmatch(r"\d+\.0", text):
-        text = text[:-2]
-    return re.sub(r"\s+", " ", text).upper()
+def md5_short(path: str, n: int = 12) -> str:
+    h = hashlib.md5()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()[:n]
 
 
-def _normalise_year(value: object) -> int | None:
-    if value is None or pd.isna(value):
-        return None
-    text = str(value).strip()
-    match = re.search(r"(19\d{2}|20\d{2}|21\d{2})$", text)
-    if match:
-        return int(match.group(1))
-    return normalize_year(value)
+def resolve(source_dir: str, needle: str) -> str:
+    hits = [f for f in sorted(os.listdir(source_dir)) if needle in f and f.endswith(".xlsx")]
+    if not hits:
+        raise FileNotFoundError(f"no source workbook matching '{needle}' in {source_dir}")
+    if len(hits) > 1:
+        raise RuntimeError(f"ambiguous source for '{needle}': {hits}")
+    return os.path.join(source_dir, hits[0])
 
 
-def _base(frame: pd.DataFrame) -> pd.DataFrame:
-    frame = frame.copy()
-    frame.columns = [_canon(column) for column in frame.columns]
-    if "company_id" in frame.columns:
-        frame["company_id"] = frame["company_id"].map(_normalise_company_id)
-    return frame
+def read_clean(path: str, header_row: int) -> pd.DataFrame:
+    df = pd.read_excel(path, header=header_row)
+    df.columns = [norm_col(c) for c in df.columns]
+    df = df.loc[:, [c for c in df.columns if c and not c.startswith("unnamed")]]
+    df = df.dropna(how="all")
+    for col in df.columns:
+        if df[col].dtype == object:
+            df[col] = df[col].map(lambda v: v.strip() if isinstance(v, str) else v)
+            df[col] = df[col].replace({"": None, "nan": None, "NaN": None})
+    return df.reset_index(drop=True)
 
 
-def _dedupe(frame: pd.DataFrame, keys: list[str]) -> pd.DataFrame:
-    frame = frame.dropna(subset=keys).copy()
-    return frame.drop_duplicates(keys, keep="last").reset_index(drop=True)
-
-
-def _build_company_aliases(companies: pd.DataFrame) -> dict[str, str]:
-    """Map source identifiers/names to the canonical companies.id value."""
-    aliases: dict[str, str] = {}
-    collisions: set[str] = set()
-    alias_columns = ["id", "ticker", "nse_code", "bse_code", "isin", "company_name"]
-
-    for _, row in companies.iterrows():
-        canonical = _normalise_company_id(row.get("id"))
-        if not canonical:
-            continue
-        for column in alias_columns:
-            raw = row.get(column)
-            alias = _normalise_alias(raw)
-            if not alias:
-                continue
-            previous = aliases.get(alias)
-            if previous is not None and previous != canonical:
-                collisions.add(alias)
-            else:
-                aliases[alias] = canonical
-
-            ticker_alias = _normalise_alias(_normalise_company_id(raw))
-            if ticker_alias and ticker_alias not in collisions:
-                previous = aliases.get(ticker_alias)
-                if previous is None or previous == canonical:
-                    aliases[ticker_alias] = canonical
-
-    for alias in collisions:
-        aliases.pop(alias, None)
-    return aliases
-
-
-def _resolve_company_ids(frame: pd.DataFrame, aliases: dict[str, str]) -> tuple[pd.DataFrame, int]:
-    if "company_id" not in frame.columns:
-        return frame, 0
-
-    resolved = frame.copy()
-    original = resolved["company_id"]
-    resolved["company_id"] = original.map(lambda value: aliases.get(_normalise_alias(value)))
-    unresolved = int(resolved["company_id"].isna().sum())
-    return resolved, unresolved
-
-
-def _records(table: str, source: pd.DataFrame, aliases: dict[str, str]) -> tuple[pd.DataFrame, int]:
-    data = _base(source)
-
-    if table == "companies":
-        output = pd.DataFrame({
-            "id": data["id"].map(_normalise_company_id),
-            "company_name": data["company_name"].astype("string").str.strip(),
-        })
-        for column in ["ticker", "bse_code", "nse_code", "isin", "sector", "industry", "website"]:
-            output[column] = data[column] if column in data else None
-        return _dedupe(output, ["id"]), 0
-
-    data, unmapped = _resolve_company_ids(data, aliases)
-    data = data.dropna(subset=["company_id"]).copy()
-
-    if table == "sectors":
-        output = pd.DataFrame({"id": data["id"], "company_id": data["company_id"],
-                               "sector": data.get("broad_sector"), "industry": data.get("sub_sector")})
-        return _dedupe(output, ["company_id"]), unmapped
-
-    if table == "peer_groups":
-        output = pd.DataFrame({"id": data["id"], "company_id": data["company_id"],
-                               "peer_group_name": data.get("peer_group_name"), "peer_company_id": None})
-        return output.drop_duplicates(["id"]).reset_index(drop=True), unmapped
-
-    if table in {"profitandloss", "balancesheet", "cashflow"}:
-        data["year"] = data["year"].map(_normalise_year)
-        if table == "profitandloss":
-            output = data.rename(columns={"tax_percentage": "tax"}).reindex(
-                columns=["id","company_id","year","sales","expenses","operating_profit","opm_percentage",
-                         "other_income","interest","depreciation","profit_before_tax","tax","net_profit","eps"])
-        elif table == "balancesheet":
-            output = data.rename(columns={"other_asset": "other_assets"}).reindex(
-                columns=["id","company_id","year","equity_capital","reserves","borrowings",
-                         "other_liabilities","total_liabilities","fixed_assets","investments",
-                         "other_assets","total_assets"])
+def create_table(con: sqlite3.Connection, table: str, df: pd.DataFrame) -> None:
+    cols = []
+    for c in df.columns:
+        t = sql_type(df[c])
+        if c == "id":
+            cols.append(f'"id" {"INTEGER" if t == "INTEGER" else "TEXT"} PRIMARY KEY')
+        elif c == "company_id":
+            cols.append('"company_id" TEXT NOT NULL')
         else:
-            output = data.rename(columns={
-                "operating_activity":"cash_from_operating_activity",
-                "investing_activity":"cash_from_investing_activity",
-                "financing_activity":"cash_from_financing_activity",
-            }).reindex(columns=["id","company_id","year","cash_from_operating_activity",
-                                 "cash_from_investing_activity","cash_from_financing_activity","net_cash_flow"])
-        return _dedupe(output, ["company_id","year"]), unmapped
-
-    if table == "stock_prices":
-        data = data.rename(columns={"date":"price_date"})
-        data["price_date"] = pd.to_datetime(data["price_date"], errors="coerce").dt.strftime("%Y-%m-%d")
-        output = data.reindex(columns=["id","company_id","price_date","open_price","high_price","low_price","close_price","volume"])
-        return _dedupe(output, ["company_id","price_date"]), unmapped
-
-    if table == "documents":
-        output = pd.DataFrame({
-            "id": data["id"], "company_id": data["company_id"], "document_type": "Annual_Report",
-            "document_url": data.get("annual_report"),
-            "document_date": data["year"].map(_normalise_year) if "year" in data else None,
-        })
-        return output.reset_index(drop=True), unmapped
-
-    if table == "prosandcons":
-        rows = []
-        for _, row in data.iterrows():
-            for item_type, column, offset in [("Pro","pros",0),("Con","cons",1)]:
-                if pd.notna(row.get(column)) and str(row[column]).strip():
-                    rows.append({"id": int(row["id"])*2+offset, "company_id": row["company_id"],
-                                 "item_type": item_type, "description": row[column]})
-        return pd.DataFrame(rows), unmapped
-
-    if table == "analysis":
-        rows = []
-        for _, row in data.iterrows():
-            for index, metric in enumerate(["compounded_sales_growth","compounded_profit_growth","stock_price_cagr","roe"]):
-                if pd.notna(row.get(metric)):
-                    rows.append({"id": int(row["id"])*10+index, "company_id": row["company_id"],
-                                 "metric_name": metric, "metric_value": row[metric],
-                                 "metric_year": _normalise_year(row.get("year")) if pd.notna(row.get("year")) else None})
-        return pd.DataFrame(rows), unmapped
-
-    if table == "financial_ratios":
-        data["year"] = data["year"].map(_normalise_year)
-        metric_columns = [c for c in data.columns if c not in {"id","company_id","year"}]
-        rows = []
-        for _, row in data.iterrows():
-            for index, metric in enumerate(metric_columns):
-                if pd.notna(row[metric]):
-                    rows.append({"id": int(row["id"])*100+index, "company_id": row["company_id"],
-                                 "year": row["year"], "ratio_name": metric, "ratio_value": row[metric]})
-        return _dedupe(pd.DataFrame(rows), ["company_id","year","ratio_name"]), unmapped
-
-    if table == "market_cap":
-        data["year"] = data["year"].map(_normalise_year)
-        output = data.rename(columns={"market_cap_crore":"market_cap","enterprise_value_crore":"enterprise_value"}).reindex(
-            columns=["id","company_id","year","market_cap","enterprise_value"])
-        return _dedupe(output, ["company_id","year"]), unmapped
-
-    raise ValueError(f"Unsupported table: {table}")
+            cols.append(f'"{c}" {t}')
+    if table == MASTER:
+        ddl = f'CREATE TABLE "{table}" (\n  ' + ",\n  ".join(cols) + "\n)"
+    else:
+        cols.append(f'FOREIGN KEY ("company_id") REFERENCES "{MASTER}"("id")')
+        ddl = f'CREATE TABLE "{table}" (\n  ' + ",\n  ".join(cols) + "\n)"
+    con.execute(f'DROP TABLE IF EXISTS "{table}"')
+    con.execute(ddl)
 
 
-def _resolve_source(logical_name: str) -> Path | None:
-    exact = RAW_DATA_DIR / logical_name
-    if exact.exists():
-        return exact
-    matches = sorted(path for path in RAW_DATA_DIR.glob(f"*{logical_name}") if path.is_file())
-    if len(matches) == 1:
-        return matches[0]
-    if not matches:
-        return None
-    raise RuntimeError(f"Multiple source files match {logical_name}: " + ", ".join(path.name for path in matches))
+# ---------------------------------------------------------------------------
+# Main load
+# ---------------------------------------------------------------------------
 
 
-def _schema_columns(connection: sqlite3.Connection, table: str) -> list[str]:
-    return [row[1] for row in connection.execute(f"PRAGMA table_info({table})").fetchall()]
+def run(source_dir: str, out_dir: str, db_name: str = "nifty100.db") -> int:
+    os.makedirs(out_dir, exist_ok=True)
+    db_path = os.path.join(out_dir, db_name)
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+    con = sqlite3.connect(db_path)
+    con.execute("PRAGMA foreign_keys = ON")
+
+    run_ts = _dt.datetime.now().isoformat(timespec="seconds")
+    canonical: set[str] = set()
+    audit: list[dict] = []
+    quarantine: list[pd.DataFrame] = []
+
+    for order, (table, needle, hdr, layer, expected_src) in enumerate(SOURCES, start=1):
+        path = resolve(source_dir, needle)
+        df = read_clean(path, hdr)
+        rows_in = len(df)
+
+        aliases_applied = 0
+        unmapped_rows = 0
+        unmapped_ids = ""
+
+        if table == MASTER:
+            # Step 1 + 2 — master first, canonical map built from it.
+            canonical = set(df["id"].astype(str))
+            if len(canonical) != len(df):
+                raise RuntimeError("duplicate company ids in master — cannot build canonical map")
+        else:
+            if not canonical:
+                raise RuntimeError(f"{table} loaded before master — check SOURCES order")
+            df["company_id"] = df["company_id"].astype(str)
+            hit = df["company_id"].isin(ALIASES)
+            aliases_applied = int(hit.sum())
+            df.loc[hit, "company_id"] = df.loc[hit, "company_id"].map(ALIASES)
+
+            # Step 3 + 4 — detect orphans, hold them back from the insert.
+            orphan_mask = ~df["company_id"].isin(canonical)
+            unmapped_rows = int(orphan_mask.sum())
+            if unmapped_rows:
+                bad = df.loc[orphan_mask].copy()
+                unmapped_ids = ";".join(sorted(bad["company_id"].unique()))
+                q = pd.DataFrame(
+                    {
+                        "target_table": table,
+                        "source_file": os.path.basename(path).split("-", 2)[-1],
+                        "source_row_id": bad["id"].astype(str).values,
+                        "unmapped_company_id": bad["company_id"].values,
+                        "reason": "company_id not present in companies master",
+                        "rejected_at": run_ts,
+                    }
+                )
+                quarantine.append(q)
+                df = df.loc[~orphan_mask].reset_index(drop=True)
+
+        create_table(con, table, df)
+        df.to_sql(table, con, if_exists="append", index=False)
+        con.commit()
+        loaded = con.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
+
+        assert loaded == rows_in - unmapped_rows, f"{table}: insert count mismatch"
+
+        audit.append(
+            dict(
+                load_order=order,
+                layer=layer,
+                source_file=os.path.basename(path).split("-", 2)[-1],
+                source_md5=md5_short(path),
+                target_table=table,
+                columns=len(df.columns),
+                rows_in_file=rows_in,
+                expected_source_rows=expected_src,
+                source_count_match="PASS" if rows_in == expected_src else "FAIL",
+                aliases_applied=aliases_applied,
+                unmapped_rows=unmapped_rows,
+                unmapped_company_ids=unmapped_ids,
+                rows_loaded=loaded,
+                fk_enforced="yes" if table != MASTER else "n/a (parent)",
+                loaded_at=run_ts,
+            )
+        )
+        print(
+            f"{order:>2}. {table:<17} in={rows_in:<5} unmapped={unmapped_rows:<4} loaded={loaded:<5}"
+        )
+
+    # Step 6 — quarantine table inside the DB (no FK, by design).
+    con.execute("DROP TABLE IF EXISTS unmapped_records")
+    con.execute(
+        """CREATE TABLE unmapped_records (
+             target_table TEXT, source_file TEXT, source_row_id TEXT,
+             unmapped_company_id TEXT, reason TEXT, rejected_at TEXT)"""
+    )
+    if quarantine:
+        qdf = pd.concat(quarantine, ignore_index=True)
+        qdf.to_sql("unmapped_records", con, if_exists="append", index=False)
+        qdf.to_csv(os.path.join(out_dir, "unmapped_records.csv"), index=False)
+    else:
+        qdf = pd.DataFrame()
+    con.commit()
+
+    # Step 7 — meaningful FK check, against a schema that declares the FKs.
+    violations = con.execute("PRAGMA foreign_key_check").fetchall()
+    fk_count = len(violations)
+
+    aud = pd.DataFrame(audit)
+    aud["fk_violations_after_load"] = fk_count
+    aud["fk_status"] = "PASS" if fk_count == 0 else "FAIL"
+    aud.to_csv(os.path.join(out_dir, "load_audit.csv"), index=False)
+
+    declared = con.execute(
+        "SELECT COUNT(*) FROM pragma_foreign_key_list('profit_and_loss')"
+    ).fetchone()[0]
+
+    print("\n--- Day 05 sign-off ---")
+    print(f"tables loaded            : {len(SOURCES)}")
+    print(f"rows loaded              : {int(aud.rows_loaded.sum())}")
+    print(f"unmapped rows quarantined: {int(aud.unmapped_rows.sum())}")
+    if len(qdf):
+        print(f"unmapped company ids     : {sorted(qdf.unmapped_company_id.unique())}")
+    print(f"FK declared on children  : {'yes' if declared else 'NO — schema wrong'}")
+    print(f"PRAGMA foreign_key_check : {fk_count} violations")
+    con.close()
+    return 0 if fk_count == 0 else 1
 
 
-def load_database() -> pd.DataFrame:
-    PROJECT_ROOT.joinpath("output").mkdir(parents=True, exist_ok=True)
-    if DB_PATH.exists():
-        DB_PATH.unlink()
-    audits: list[dict[str, object]] = []
-
-    with sqlite3.connect(DB_PATH) as connection:
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
-
-        companies_path = _resolve_source("companies.xlsx")
-        if companies_path is None:
-            raise FileNotFoundError("Missing source workbook: companies.xlsx")
-        companies_source = load_excel(companies_path)
-        companies, _ = _records("companies", companies_source, {})
-        companies.to_sql("companies", connection, if_exists="append", index=False)
-        aliases = _build_company_aliases(companies)
-        valid_companies = set(companies["id"].dropna().astype(str))
-
-        audits.append({"source_file": companies_path.name, "target_table":"companies",
-                       "source_rows":len(companies_source),"loaded_rows":len(companies),
-                       "database_rows":len(companies),"unmapped_rows":0,"status":"LOADED"})
-
-        for filename in FILES[1:]:
-            table = TABLES[filename]
-            path = _resolve_source(filename)
-            if path is None:
-                audits.append({"source_file":filename,"target_table":table,"source_rows":0,
-                               "loaded_rows":0,"database_rows":0,"unmapped_rows":0,"status":"ERROR: missing source"})
-                continue
-
-            source = load_excel(path)
-            try:
-                records, unmapped = _records(table, source, aliases)
-                columns = [c for c in records.columns if c in _schema_columns(connection, table)]
-                records = records[columns].dropna(subset=["id"])
-                records.to_sql(table, connection, if_exists="append", index=False)
-                db_rows = int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
-                lower, upper = EXPECTED.get(table, (None, None))
-                status = "LOADED"
-                if lower is not None and not lower <= db_rows <= upper:
-                    status = f"WARNING: expected {lower}-{upper}, got {db_rows}"
-                audits.append({"source_file":path.name,"target_table":table,"source_rows":len(source),
-                               "loaded_rows":len(records),"database_rows":db_rows,
-                               "unmapped_rows":unmapped,"status":status})
-            except Exception as exc:
-                connection.rollback()
-                audits.append({"source_file":filename,"target_table":table,"source_rows":len(source),
-                               "loaded_rows":0,"database_rows":int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]),
-                               "unmapped_rows":0,"status":f"ERROR: {exc}"})
-
-        fk_errors = connection.execute("PRAGMA foreign_key_check").fetchall()
-        audits.append({"source_file":"","target_table":"","source_rows":"","loaded_rows":"",
-                       "database_rows":len(fk_errors),"unmapped_rows":"",
-                       "status":"FK_CHECK_0" if not fk_errors else f"FK_ERRORS:{len(fk_errors)}"})
-
-    audit = pd.DataFrame(audits)
-    audit.to_csv(AUDIT_PATH, index=False)
-    return audit
-
-
-def main() -> None:
-    audit = load_database()
-    print(audit.to_string(index=False))
-    print(f"\nAudit written to: {AUDIT_PATH}")
-    print(f"Database written to: {DB_PATH}")
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--source", default="/mnt/user-data/uploads")
+    ap.add_argument("--out", default="/mnt/user-data/outputs")
+    a = ap.parse_args()
+    return run(a.source, a.out)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
