@@ -131,9 +131,12 @@ def create_table(con: sqlite3.Connection, table: str, df: pd.DataFrame) -> None:
 # ---------------------------------------------------------------------------
 
 
-def run(source_dir: str, out_dir: str, db_name: str = "nifty100.db") -> int:
+def run(source_dir: str, out_dir: str, db_name: str = "db/nifty100.db") -> int:
     os.makedirs(out_dir, exist_ok=True)
-    db_path = os.path.join(out_dir, db_name)
+    db_path = db_name if os.path.dirname(db_name) else os.path.join(out_dir, db_name)
+    db_parent = os.path.dirname(db_path)
+    if db_parent:
+        os.makedirs(db_parent, exist_ok=True)
     if os.path.exists(db_path):
         os.remove(db_path)
 
@@ -155,7 +158,6 @@ def run(source_dir: str, out_dir: str, db_name: str = "nifty100.db") -> int:
         unmapped_ids = ""
 
         if table == MASTER:
-            # Step 1 + 2 — master first, canonical map built from it.
             canonical = set(df["id"].astype(str))
             if len(canonical) != len(df):
                 raise RuntimeError("duplicate company ids in master — cannot build canonical map")
@@ -167,7 +169,6 @@ def run(source_dir: str, out_dir: str, db_name: str = "nifty100.db") -> int:
             aliases_applied = int(hit.sum())
             df.loc[hit, "company_id"] = df.loc[hit, "company_id"].map(ALIASES)
 
-            # Step 3 + 4 — detect orphans, hold them back from the insert.
             orphan_mask = ~df["company_id"].isin(canonical)
             unmapped_rows = int(orphan_mask.sum())
             if unmapped_rows:
@@ -216,7 +217,6 @@ def run(source_dir: str, out_dir: str, db_name: str = "nifty100.db") -> int:
             f"{order:>2}. {table:<17} in={rows_in:<5} unmapped={unmapped_rows:<4} loaded={loaded:<5}"
         )
 
-    # Step 6 — quarantine table inside the DB (no FK, by design).
     con.execute("DROP TABLE IF EXISTS unmapped_records")
     con.execute(
         """CREATE TABLE unmapped_records (
@@ -231,7 +231,6 @@ def run(source_dir: str, out_dir: str, db_name: str = "nifty100.db") -> int:
         qdf = pd.DataFrame()
     con.commit()
 
-    # Step 7 — meaningful FK check, against a schema that declares the FKs.
     violations = con.execute("PRAGMA foreign_key_check").fetchall()
     fk_count = len(violations)
 
@@ -258,8 +257,8 @@ def run(source_dir: str, out_dir: str, db_name: str = "nifty100.db") -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--source", default="/mnt/user-data/uploads")
-    ap.add_argument("--out", default="/mnt/user-data/outputs")
+    ap.add_argument("--source", default="data/raw")
+    ap.add_argument("--out", default="output")
     a = ap.parse_args()
     return run(a.source, a.out)
 
