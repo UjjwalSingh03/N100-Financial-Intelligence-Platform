@@ -51,6 +51,7 @@ Implemented and corrected the full SQLite loading pipeline in `src/etl/database_
 - Loads all 12 Excel source files from `data/raw/`.
 - Uses the Day 02 Excel loader and handles financial-year formats such as `Dec 2012` and `Mar-13`.
 - Preserves the 92-company master universe from `companies.xlsx`.
+- Normalizes company identifiers and resolves dependent source IDs against canonical company aliases.
 - Filters dependent source rows whose company IDs are not present in the 92-company master so foreign-key integrity is maintained.
 - Deduplicates annual records before inserting into tables with `UNIQUE(company_id, year)`.
 - Maps source-specific columns to the normalized SQLite schema.
@@ -76,11 +77,35 @@ Implemented and corrected the full SQLite loading pipeline in `src/etl/database_
 11. Financial Ratios
 12. Market Cap
 
-> **Execution note:** the actual Excel files are intentionally not committed to GitHub. Run `make load` after placing all 12 source workbooks in `data/raw/`. The generated audit is the source of truth for actual loaded counts and the FK-check result.
+> **Execution note:** the generated audit is the source of truth for actual loaded counts, unmapped rows, and the FK-check result. Day 05 is only signed off after the corrected loader has been executed and the resulting audit confirms the acceptance criteria.
+
+### Day 06 — Data Quality Manual Review
+
+Added `notebooks/day06_manual_review.sql` for the required manual review.
+
+**Day 06 checks:**
+- Select five reproducible companies for manual inspection.
+- Review P&L, Balance Sheet, and Cash Flow year coverage.
+- Identify companies with fewer than five P&L years.
+- Compare financial-statement coverage across the 92-company universe.
+- Detect orphan company IDs across dependent tables.
+- Produce a compact year-coverage summary.
+- Use the findings to identify loader/source-mapping bugs before rerunning Day 05.
+
+**Execution:**
+1. Run the corrected Day 05 loader:
+   `make load`
+2. Open `nifty100.db` in SQLite.
+3. Run `notebooks/day06_manual_review.sql`.
+4. Investigate any orphan IDs or unexpected year gaps against the original Excel files.
+5. Fix loader logic when the issue is caused by ETL mapping.
+6. Rerun `make load`.
+7. Run `pytest -q`.
+8. Confirm the regenerated `output/load_audit.csv` before sign-off.
 
 ## Important source-data note
 
-The uploaded Excel files are source inputs for this project. They are not automatically committed to GitHub by the ETL code. Place the required workbooks in `data/raw/` before running the pipeline.
+The uploaded Excel files are source inputs for this project. Place the required workbooks in `data/raw/` before running the pipeline.
 
 ## Project structure
 
@@ -124,6 +149,6 @@ make load
 make clean
 ```
 
-## Next step
+## Sprint 1 status
 
-**Day 06 — Manual Review & Coverage:** review five random companies, verify year coverage, identify companies with fewer than five years of data, and fix loader issues found during review.
+**Day 06 implementation is prepared. Final Day 06 sign-off depends on executing the manual-review SQL against the freshly regenerated database, fixing any loader bugs found, rerunning the load, and confirming the final audit/test results.**
