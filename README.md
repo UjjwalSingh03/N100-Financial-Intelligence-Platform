@@ -41,7 +41,7 @@ Implemented and corrected DQ-01 through DQ-16 with structured validation failure
 
 Implemented `db/schema.sql` with primary keys, foreign keys, uniqueness constraints, indexes, and SQLite foreign-key enforcement.
 
-The schema now contains explicit targets for all 12 source datasets, including `market_cap`. The project specification's “10 tables” wording is inconsistent with its source list, so no supplied dataset is silently dropped.
+The schema contains explicit targets for all 12 source datasets, including `market_cap`. The original specification says “10 tables” while listing 11 table names plus 12 source files; the implementation keeps every supplied dataset rather than silently dropping one.
 
 ### Day 05 — Full Data Load — All 12 Files
 
@@ -57,11 +57,10 @@ Implemented and corrected the full SQLite loading pipeline in `src/etl/database_
 - Maps source-specific columns to the normalized SQLite schema.
 - Reshapes wide supplementary datasets such as analysis, pros/cons, and financial ratios into the target tables.
 - Loads parent data before dependent data.
-- Recreates `nifty100.db` from `db/schema.sql` on each load, preventing stale partial-load rows.
+- Recreates `nifty100.db` from `db/schema.sql` on each load.
 - Enables `PRAGMA foreign_keys = ON`.
 - Generates `output/load_audit.csv`, including source rows, loaded rows, database rows, unmapped source rows, and status.
 - Performs `PRAGMA foreign_key_check` after loading.
-- Tracks target row-count ranges for the core datasets.
 
 **Load order:**
 1. Companies
@@ -77,7 +76,7 @@ Implemented and corrected the full SQLite loading pipeline in `src/etl/database_
 11. Financial Ratios
 12. Market Cap
 
-> **Execution note:** the generated audit is the source of truth for actual loaded counts, unmapped rows, and the FK-check result. Day 05 is only signed off after the corrected loader has been executed and the resulting audit confirms the acceptance criteria.
+> **Execution note:** the generated audit is the source of truth for actual loaded counts, unmapped rows, and the FK-check result. Day 05/06 should only be signed off after the corrected loader has been executed and the resulting audit/manual-review results confirm the acceptance criteria.
 
 ### Day 06 — Data Quality Manual Review
 
@@ -90,18 +89,53 @@ Added `notebooks/day06_manual_review.sql` for the required manual review.
 - Compare financial-statement coverage across the 92-company universe.
 - Detect orphan company IDs across dependent tables.
 - Produce a compact year-coverage summary.
-- Use the findings to identify loader/source-mapping bugs before rerunning Day 05.
+- Use findings to identify loader/source-mapping bugs before rerunning Day 05.
 
-**Execution:**
-1. Run the corrected Day 05 loader:
-   `make load`
-2. Open `nifty100.db` in SQLite.
-3. Run `notebooks/day06_manual_review.sql`.
-4. Investigate any orphan IDs or unexpected year gaps against the original Excel files.
-5. Fix loader logic when the issue is caused by ETL mapping.
-6. Rerun `make load`.
-7. Run `pytest -q`.
-8. Confirm the regenerated `output/load_audit.csv` before sign-off.
+### Day 07 — Sprint Wrap-Up & Review
+
+Added `notebooks/exploratory_queries.sql` with 10 read-only exploratory queries covering:
+
+1. Company universe count.
+2. Row counts for all populated tables.
+3. Latest-year companies ranked by net profit.
+4. Latest-year companies ranked by sales.
+5. Latest-year average operating margin by sector.
+6. Latest market-cap ranking.
+7. Financial-statement year coverage by company.
+8. Companies with fewer than five P&L years.
+9. Latest stock-price snapshot.
+10. SQLite foreign-key integrity check.
+
+The Day 07 SQL is aligned with the current schema names (`profitandloss`, `balancesheet`, `cashflow`, `prosandcons`, etc.) and is intended for execution against the freshly generated `nifty100.db`.
+
+**Sprint 1 review checklist:**
+- `SELECT COUNT(*) FROM companies` = 92.
+- `PRAGMA foreign_key_check` returns 0 rows.
+- `output/load_audit.csv` contains zero CRITICAL rejections.
+- 35+ ETL unit tests pass.
+- Five-company manual review is correct.
+- Final sprint review is signed off.
+
+> **Verification note:** these are acceptance criteria, not claimed execution results. Run `make load`, the Day 06 review SQL, `pytest -q`, and `notebooks/exploratory_queries.sql` against the current source data before recording final sign-off.
+
+## Data Quality Rules
+
+The validator covers DQ-01 through DQ-16, including:
+- DQ-01 primary-key uniqueness/missing IDs
+- DQ-02 `(company_id, year)` uniqueness
+- DQ-03 foreign-key integrity
+- DQ-04 balance-sheet reconciliation
+- DQ-05 operating-margin cross-check
+- DQ-06 positive sales
+- DQ-07 tax-rate sanity
+- DQ-08 EPS sanity
+- DQ-09/DQ-10 dividend checks
+- DQ-11 company website validation
+- DQ-12 missing EPS
+- DQ-13 total assets positive
+- DQ-14 PAT missing
+- DQ-15 close price positive
+- DQ-16 stock-date validity
 
 ## Important source-data note
 
@@ -149,6 +183,6 @@ make load
 make clean
 ```
 
-## Sprint 1 status
+## Sprint 1 Status
 
-**Day 06 implementation is prepared. Final Day 06 sign-off depends on executing the manual-review SQL against the freshly regenerated database, fixing any loader bugs found, rerunning the load, and confirming the final audit/test results.**
+**Day 07 implementation is prepared.** Final sprint sign-off remains dependent on executing the current loader, manual review, unit tests, exploratory SQL, and confirming the generated audit meets the acceptance criteria.
