@@ -187,31 +187,6 @@ make clean
 
 **Day 07 implementation is prepared.** Final sprint sign-off remains dependent on executing the current loader, manual review, unit tests, exploratory SQL, and confirming the generated audit meets the acceptance criteria.
 
-
-### Day 14 — Tests & Sprint Review
-
-Implemented the Sprint 2 validation and review gate in `scripts/day14_sprint_review.py`.
-
-**Day 14 validation checks:**
-- Runs the existing ratio, CAGR, and cash-flow formula test suites and requires at least 20 passing formula tests with zero pytest failures.
-- Checks `financial_ratios` row count (>= 1,100), required KPI columns, null-only KPI columns, and SQLite foreign-key integrity.
-- Runs the latest-year screener preview: ROE > 15% and D/E < 1, reporting the result count and first five rows for business review.
-- Validates `output/ratio_edge_cases.log` so every anomaly entry has a supported category and explanation.
-- Confirms `output/capital_allocation.csv` exists.
-- Returns a non-zero exit code when any Definition-of-Done gate is blocked; it does not fabricate sprint sign-off.
-
-Run:
-
-```bash
-python scripts/day14_sprint_review.py --db db/nifty100.db
-```
-
-Added `notebooks/day14_demo.sql` to display five latest-year companies with the computed KPI columns and `docs/sprint2_retrospective.md` for formula decisions and edge-case resolutions.
-
-Added `src/analytics/cashflow_kpis.py` as a compatibility module that exposes the Day 11 cash-flow KPI implementation under the deliverable filename requested by the sprint specification.
-
-> **Execution note:** the Day 14 runner is committed, but final status, screener count, row count, null-only columns, anomaly review, and team-lead sign-off must be based on executing it against the current `db/nifty100.db`. The repository does not claim those results until the command is actually run.
-
 ## Sprint 2 — Financial Ratio Engine
 
 Sprint 2 extends the platform with a reusable Financial Ratio Engine covering profitability, leverage, efficiency, growth, cash-flow quality, and capital-allocation analytics.
@@ -260,6 +235,27 @@ Added Revenue, PAT, and EPS CAGR for 3-year, 5-year, and 10-year windows. The en
 
 Separate flag fields are generated so sign changes and invalid CAGR scenarios are not represented as misleading percentages. Added 10 unit tests covering normal CAGR calculations, edge cases, insufficient data, and database-ready output columns.
 
+### Day 11 — Cash Flow KPIs & Capital Allocation
+
+Implemented `src/analytics/cash_flow.py` with:
+- Free Cash Flow (CFO + CFI), including negative FCF values.
+- Five-year CFO/PAT quality scoring and High Quality / Moderate / Accrual Risk labels.
+- CapEx intensity and Asset Light / Moderate / Capital Intensive classification.
+- FCF conversion rate with zero-operating-profit handling.
+- Eight-pattern capital allocation classification from CFO, CFI, and CFF signs.
+- `(+,-,-)` refinement to Shareholder Returns when CFO/PAT quality is above 1.0; otherwise Reinvestor.
+
+Added `scripts/generate_capital_allocation.py` to generate `output/capital_allocation.csv` with:
+`company_id, year, cfo_sign, cfi_sign, cff_sign, pattern_label`.
+
+Added Day 11 unit tests in `tests/analytics/test_cash_flow.py` covering FCF, five-year CFO quality, classification thresholds, zero denominators, and capital-allocation patterns.
+
+Run the CSV generator after loading the database:
+
+```bash
+python scripts/generate_capital_allocation.py
+```
+
 ### Day 12 — Populate financial_ratios Table
 
 Implemented the full ratio-table population workflow for all available company/year records.
@@ -293,7 +289,6 @@ The script rebuilds the wide `financial_ratios` table, populates one row per com
 
 **Data-source note:** the current normalized schema does not contain a dedicated dividend-payout or share-count field. The population script therefore leaves `dividend_payout_ratio_pct` and `book_value_per_share` NULL until those source fields are normalized, rather than fabricating values. EPS is taken directly from the P&L source. The 5-year CAGR values use the Day 10 CAGR engine and its sign/zero-base handling.
 
-
 ### Day 13 — Bank ROCE Carve-Out & Edge Case Log
 
 Implemented the Day 13 ratio edge-case audit in `scripts/ratio_edge_case_audit.py`.
@@ -317,25 +312,26 @@ python scripts/ratio_edge_case_audit.py --db db/nifty100.db
 
 The generated `output/ratio_edge_cases.log` is the review artifact. The script must be executed against the current database before recording actual anomaly counts.
 
-### Day 11 — Cash Flow KPIs & Capital Allocation
+### Day 14 — Tests & Sprint Review
 
-### Day 11 — Cash Flow KPIs & Capital Allocation
+Implemented the Sprint 2 validation and review gate in `scripts/day14_sprint_review.py`.
 
-Implemented `src/analytics/cash_flow.py` with:
-- Free Cash Flow (CFO + CFI), including negative FCF values.
-- Five-year CFO/PAT quality scoring and High Quality / Moderate / Accrual Risk labels.
-- CapEx intensity and Asset Light / Moderate / Capital Intensive classification.
-- FCF conversion rate with zero-operating-profit handling.
-- Eight-pattern capital allocation classification from CFO, CFI, and CFF signs.
-- `(+,-,-)` refinement to Shareholder Returns when CFO/PAT quality is above 1.0; otherwise Reinvestor.
+**Day 14 validation checks:**
+- Runs the existing ratio, CAGR, and cash-flow formula test suites and requires at least 20 passing formula tests with zero pytest failures.
+- Checks `financial_ratios` row count (>= 1,100), required KPI columns, null-only KPI columns, and SQLite foreign-key integrity.
+- Runs the latest-year screener preview: ROE > 15% and D/E < 1, reporting the result count and first five rows for business review.
+- Validates `output/ratio_edge_cases.log` so every anomaly entry has a supported category and explanation.
+- Confirms `output/capital_allocation.csv` exists.
+- Returns a non-zero exit code when any Definition-of-Done gate is blocked; it does not fabricate sprint sign-off.
 
-Added `scripts/generate_capital_allocation.py` to generate `output/capital_allocation.csv` with:
-`company_id, year, cfo_sign, cfi_sign, cff_sign, pattern_label`.
-
-Added Day 11 unit tests in `tests/analytics/test_cash_flow.py` covering FCF, five-year CFO quality, classification thresholds, zero denominators, and capital-allocation patterns.
-
-Run the CSV generator after loading the database:
+Run:
 
 ```bash
-python scripts/generate_capital_allocation.py
+python scripts/day14_sprint_review.py --db db/nifty100.db
 ```
+
+Added `notebooks/day14_demo.sql` to display five latest-year companies with the computed KPI columns and `docs/sprint2_retrospective.md` for formula decisions and edge-case resolutions.
+
+Added `src/analytics/cashflow_kpis.py` as a compatibility module that exposes the Day 11 cash-flow KPI implementation under the deliverable filename requested by the sprint specification.
+
+> **Execution note:** the Day 14 runner is committed, but final status, screener count, row count, null-only columns, anomaly review, and team-lead sign-off must be based on executing it against the current `db/nifty100.db`. The repository does not claim those results until the command is actually run.
