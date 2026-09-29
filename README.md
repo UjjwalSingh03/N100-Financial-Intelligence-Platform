@@ -189,6 +189,54 @@ make clean
 
 ## Sprint 2 — Financial Ratio Engine
 
+Sprint 2 extends the platform with a reusable Financial Ratio Engine covering profitability, leverage, efficiency, growth, cash-flow quality, and capital-allocation analytics.
+
+### Day 08 — Profitability Ratios
+
+Implemented `src/analytics/ratios.py` for core profitability KPIs:
+- Net Profit Margin (NPM) = Net Profit / Sales × 100.
+- Operating Profit Margin (OPM) calculation with a cross-check against the source `opm_percentage`; differences above 1% are logged.
+- Return on Equity (ROE) = Net Profit / (Equity Capital + Reserves) × 100, returning `None` for non-positive equity.
+- Return on Capital Employed (ROCE) using EBIT / (Equity + Reserves + Borrowings) × 100.
+- Financials-sector ROCE classification uses a sector-relative benchmark rather than a generic absolute threshold.
+- Return on Assets (ROA) = Net Profit / Total Assets × 100, returning `None` when assets are zero.
+
+Added `profitability_ratios()` and 8 unit tests covering normal calculations and denominator/edge cases.
+
+### Day 09 — Leverage & Efficiency Ratios
+
+Extended `src/analytics/ratios.py` with leverage and operating-efficiency KPIs:
+- Debt-to-Equity (D/E) = Borrowings / (Equity Capital + Reserves).
+- Debt-free companies return D/E = 0 when borrowings are zero.
+- `high_leverage_flag` is raised when D/E > 5 for non-Financials companies.
+- Interest Coverage Ratio (ICR) = (Operating Profit + Other Income) / Interest.
+- Zero interest is handled as `None` with a `Debt Free` display label.
+- ICR below 1.5 receives a warning flag.
+- Net Debt = Borrowings − Investments.
+- Asset Turnover = Sales / Total Assets, returning `None` when assets are zero.
+
+Added 8 unit tests covering leverage, debt-free handling, ICR warnings, net debt, and asset turnover.
+
+### Day 10 — CAGR Engine
+
+Implemented `src/analytics/cagr.py` for historical growth analysis using:
+
+```
+CAGR = ((End / Start)^(1/n) - 1) × 100
+```
+
+Added Revenue, PAT, and EPS CAGR for 3-year, 5-year, and 10-year windows. The engine explicitly handles:
+- Positive → Positive: normal CAGR.
+- Positive → Negative: `DECLINE_TO_LOSS`.
+- Negative → Positive: `TURNAROUND`.
+- Negative → Negative: `BOTH_NEGATIVE`.
+- Zero starting value: `ZERO_BASE`.
+- Insufficient historical observations: `INSUFFICIENT`.
+
+Separate flag fields are generated so sign changes and invalid CAGR scenarios are not represented as misleading percentages. Added 10 unit tests covering normal CAGR calculations, edge cases, insufficient data, and database-ready output columns.
+
+### Day 11 — Cash Flow KPIs & Capital Allocation
+
 ### Day 11 — Cash Flow KPIs & Capital Allocation
 
 Implemented `src/analytics/cash_flow.py` with:
