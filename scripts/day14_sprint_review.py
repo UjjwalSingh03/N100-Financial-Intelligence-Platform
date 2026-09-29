@@ -48,7 +48,7 @@ def check_edge_log(path):
     return not errors, count, errors
 
 def run_formula_tests():
-    targets = ["tests/analytics/test_ratios.py","tests/analytics/test_cagr.py","tests/analytics/test_cash_flow.py"]
+    targets = ["tests/kpi/test_formula_contract.py"]
     result = subprocess.run(["python","-m","pytest","-q",*targets], cwd=ROOT, text=True, capture_output=True)
     match = re.search(r"(\d+) passed", result.stdout)
     return result.returncode, int(match.group(1)) if match else 0, result.stdout + result.stderr
