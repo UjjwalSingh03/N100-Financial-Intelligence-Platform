@@ -7,7 +7,7 @@ import csv
 import sqlite3
 from pathlib import Path
 
-from src.analytics.cash_flow import capital_allocation_pattern, cfo_quality_score
+from src.analytics.cash_flow import capital_allocation_pattern, cash_sign, cfo_quality_score
 
 
 def _quality_by_company_year(
@@ -74,9 +74,9 @@ def generate(db_path: str, output_path: str) -> int:
                 {
                     "company_id": row["company_id"],
                     "year": row["year"],
-                    "cfo_sign": "+" if row["cfo"] > 0 else "-" if row["cfo"] < 0 else "0",
-                    "cfi_sign": "+" if row["cfi"] > 0 else "-" if row["cfi"] < 0 else "0",
-                    "cff_sign": "+" if row["cff"] > 0 else "-" if row["cff"] < 0 else "0",
+                    "cfo_sign": cash_sign(row["cfo"]),
+                    "cfi_sign": cash_sign(row["cfi"]),
+                    "cff_sign": cash_sign(row["cff"]),
                     "pattern_label": capital_allocation_pattern(
                         row["cfo"], row["cfi"], row["cff"], score
                     ),
