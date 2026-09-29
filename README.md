@@ -268,6 +268,30 @@ The script rebuilds the wide `financial_ratios` table, populates one row per com
 
 **Data-source note:** the current normalized schema does not contain a dedicated dividend-payout or share-count field. The population script therefore leaves `dividend_payout_ratio_pct` and `book_value_per_share` NULL until those source fields are normalized, rather than fabricating values. EPS is taken directly from the P&L source. The 5-year CAGR values use the Day 10 CAGR engine and its sign/zero-base handling.
 
+
+### Day 13 — Bank ROCE Carve-Out & Edge Case Log
+
+Implemented the Day 13 ratio edge-case audit in `scripts/ratio_edge_case_audit.py`.
+
+**Day 13 checks:**
+- Preserves the Financials carve-out: `high_leverage_flag` remains suppressed for companies whose `broad_sector` is Financials, covering banks, NBFCs, and insurance.
+- Recomputes ROCE from EBIT/operating profit divided by equity + reserves + borrowings.
+- Cross-checks engine ROCE against the source `roce_percentage` field when available and logs anomalies above 5 percentage points to `output/ratio_edge_cases.log`.
+- Cross-checks source ROE against the ratio-engine ROE and logs material differences for review.
+- Keeps the ratio-engine ROE/ROCE values authoritative for analytics; source values are reference/display values only.
+- Records each anomaly with company, year, source value, engine value, difference, and a review category.
+- Uses **data source issue** for missing/invalid source or engine inputs and **formula discrepancy** when both values are valid but materially differ under the engine formula.
+- **Version difference** is reserved for cases where source/version metadata confirms a historical formula or methodology change; the script does not invent that classification without evidence.
+- Added tests for Financials leverage suppression and anomaly logging.
+
+Run:
+
+```bash
+python scripts/ratio_edge_case_audit.py --db db/nifty100.db
+```
+
+The generated `output/ratio_edge_cases.log` is the review artifact. The script must be executed against the current database before recording actual anomaly counts.
+
 ### Day 11 — Cash Flow KPIs & Capital Allocation
 
 ### Day 11 — Cash Flow KPIs & Capital Allocation
