@@ -186,3 +186,26 @@ make clean
 ## Sprint 1 Status
 
 **Day 07 implementation is prepared.** Final sprint sign-off remains dependent on executing the current loader, manual review, unit tests, exploratory SQL, and confirming the generated audit meets the acceptance criteria.
+
+## Sprint 2 — Financial Ratio Engine
+
+### Day 11 — Cash Flow KPIs & Capital Allocation
+
+Implemented `src/analytics/cash_flow.py` with:
+- Free Cash Flow (CFO + CFI), including negative FCF values.
+- Five-year CFO/PAT quality scoring and High Quality / Moderate / Accrual Risk labels.
+- CapEx intensity and Asset Light / Moderate / Capital Intensive classification.
+- FCF conversion rate with zero-operating-profit handling.
+- Eight-pattern capital allocation classification from CFO, CFI, and CFF signs.
+- `(+,-,-)` refinement to Shareholder Returns when CFO/PAT quality is above 1.0; otherwise Reinvestor.
+
+Added `scripts/generate_capital_allocation.py` to generate `output/capital_allocation.csv` with:
+`company_id, year, cfo_sign, cfi_sign, cff_sign, pattern_label`.
+
+Added Day 11 unit tests in `tests/analytics/test_cash_flow.py` covering FCF, five-year CFO quality, classification thresholds, zero denominators, and capital-allocation patterns.
+
+Run the CSV generator after loading the database:
+
+```bash
+python scripts/generate_capital_allocation.py
+```
