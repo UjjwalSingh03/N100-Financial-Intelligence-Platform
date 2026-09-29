@@ -1,0 +1,9 @@
+# Day 14 Ratio Edge Case Audit
+
+Generated from the completed Day 14 validation database.
+
+- Total logged anomalies: 1,191
+- Threshold: absolute source-vs-engine difference > 5 percentage points
+- ROCE/ROE anomalies are recorded with company, year, source value, engine value, difference, category, and reason.
+- Current automated category: formula discrepancy.
+- Final team-lead review is still required before treating every anomaly as fully explained, because source/version differences can require human review.
