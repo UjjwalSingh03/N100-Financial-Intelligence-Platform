@@ -187,6 +187,31 @@ make clean
 
 **Day 07 implementation is prepared.** Final sprint sign-off remains dependent on executing the current loader, manual review, unit tests, exploratory SQL, and confirming the generated audit meets the acceptance criteria.
 
+
+### Day 14 — Tests & Sprint Review
+
+Implemented the Sprint 2 validation and review gate in `scripts/day14_sprint_review.py`.
+
+**Day 14 validation checks:**
+- Runs the existing ratio, CAGR, and cash-flow formula test suites and requires at least 20 passing formula tests with zero pytest failures.
+- Checks `financial_ratios` row count (>= 1,100), required KPI columns, null-only KPI columns, and SQLite foreign-key integrity.
+- Runs the latest-year screener preview: ROE > 15% and D/E < 1, reporting the result count and first five rows for business review.
+- Validates `output/ratio_edge_cases.log` so every anomaly entry has a supported category and explanation.
+- Confirms `output/capital_allocation.csv` exists.
+- Returns a non-zero exit code when any Definition-of-Done gate is blocked; it does not fabricate sprint sign-off.
+
+Run:
+
+```bash
+python scripts/day14_sprint_review.py --db db/nifty100.db
+```
+
+Added `notebooks/day14_demo.sql` to display five latest-year companies with the computed KPI columns and `docs/sprint2_retrospective.md` for formula decisions and edge-case resolutions.
+
+Added `src/analytics/cashflow_kpis.py` as a compatibility module that exposes the Day 11 cash-flow KPI implementation under the deliverable filename requested by the sprint specification.
+
+> **Execution note:** the Day 14 runner is committed, but final status, screener count, row count, null-only columns, anomaly review, and team-lead sign-off must be based on executing it against the current `db/nifty100.db`. The repository does not claim those results until the command is actually run.
+
 ## Sprint 2 — Financial Ratio Engine
 
 Sprint 2 extends the platform with a reusable Financial Ratio Engine covering profitability, leverage, efficiency, growth, cash-flow quality, and capital-allocation analytics.
