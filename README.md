@@ -235,6 +235,39 @@ Added Revenue, PAT, and EPS CAGR for 3-year, 5-year, and 10-year windows. The en
 
 Separate flag fields are generated so sign changes and invalid CAGR scenarios are not represented as misleading percentages. Added 10 unit tests covering normal CAGR calculations, edge cases, insufficient data, and database-ready output columns.
 
+### Day 12 — Populate financial_ratios Table
+
+Implemented the full ratio-table population workflow for all available company/year records.
+
+**Day 12 KPI columns:**
+- `net_profit_margin_pct`
+- `operating_profit_margin_pct`
+- `return_on_equity_pct`
+- `debt_to_equity`
+- `interest_coverage`
+- `asset_turnover`
+- `free_cash_flow_cr`
+- `capex_cr`
+- `earnings_per_share`
+- `book_value_per_share`
+- `dividend_payout_ratio_pct`
+- `total_debt_cr`
+- `cash_from_operations_cr`
+- `revenue_cagr_5yr`
+- `pat_cagr_5yr`
+- `eps_cagr_5yr`
+- `composite_quality_score`
+
+Run:
+
+```bash
+python scripts/populate_financial_ratios.py --db db/nifty100.db
+```
+
+The script rebuilds the wide `financial_ratios` table, populates one row per company/year, verifies that the row count is at least 1,100, and runs `PRAGMA foreign_key_check`.
+
+**Data-source note:** the current normalized schema does not contain a dedicated dividend-payout or share-count field. The population script therefore leaves `dividend_payout_ratio_pct` and `book_value_per_share` NULL until those source fields are normalized, rather than fabricating values. EPS is taken directly from the P&L source. The 5-year CAGR values use the Day 10 CAGR engine and its sign/zero-base handling.
+
 ### Day 11 — Cash Flow KPIs & Capital Allocation
 
 ### Day 11 — Cash Flow KPIs & Capital Allocation
