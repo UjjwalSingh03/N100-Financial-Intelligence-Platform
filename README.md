@@ -428,3 +428,43 @@ python -m src.analytics.peer --db db/nifty100.db --peer-groups data/raw
 ```
 
 **Validation status:** implementation and contract tests are committed. Execute the command against the current production database/source workbook to verify the actual number of peer groups, percentile rows, and any unassigned companies.
+
+
+### Day 19 — Radar Charts
+
+Implemented `scripts/peer_reports.py` radar-chart generation using Matplotlib polar plots.
+
+**Day 19 capabilities:**
+- Generates one PNG per company with peer-group membership under `reports/radar_charts/`.
+- Uses eight axes: ROE, ROCE, NPM, D/E, FCF Score, PAT CAGR 5Y, Revenue CAGR 5Y, and Composite Score.
+- Normalizes axes to comparable 0–100 peer-relative scores; D/E is inverted so lower leverage scores higher.
+- Shows the company as a filled polygon and the peer-group average as a dashed outline.
+- Companies without a peer group receive a standalone Composite Score polar chart against the Nifty 100 average.
+- Uses readable labels and 160 DPI PNG output.
+
+Run:
+
+```bash
+python scripts/peer_reports.py --radar --db db/nifty100.db --peer-groups data/raw
+```
+
+### Day 20 — Peer Comparison Excel Report
+
+The same reporting module generates `output/peer_comparison.xlsx`.
+
+**Day 20 capabilities:**
+- Requires and validates 11 peer groups.
+- Creates one worksheet per peer group.
+- Each sheet contains `company_id`, `company_name`, 10 raw peer metrics, and 10 percentile-rank columns.
+- Percentile cells are green at >=75%, yellow from >25% to <75%, and red at <=25%.
+- Highlights the benchmark row in amber/gold. If the source workbook contains an explicit benchmark column it is used; otherwise the first company in the group is used deterministically.
+- Adds a peer-group median summary row for all numeric metric and percentile columns.
+- Freezes headers, enables filters, and sizes columns for standard Excel viewing.
+
+Run:
+
+```bash
+python scripts/peer_reports.py --excel --db db/nifty100.db --peer-groups data/raw
+```
+
+**Validation status:** Day 19/20 implementation and unit-test coverage are committed. Execute the commands against the current production database and source workbook before recording actual chart counts, workbook row counts, or final Sprint 3 sign-off.
