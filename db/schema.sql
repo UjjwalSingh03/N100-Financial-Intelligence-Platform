@@ -161,4 +161,17 @@ CREATE INDEX IF NOT EXISTS idx_prices_company_date ON stock_prices(company_id, p
 CREATE INDEX IF NOT EXISTS idx_ratios_company_year ON financial_ratios(company_id, year);
 CREATE INDEX IF NOT EXISTS idx_market_cap_company_year ON market_cap(company_id, year);
 
+CREATE TABLE IF NOT EXISTS peer_percentiles (
+    id INTEGER PRIMARY KEY,
+    company_id TEXT NOT NULL,
+    peer_group_name TEXT NOT NULL,
+    metric TEXT NOT NULL,
+    value REAL,
+    percentile_rank REAL,
+    year INTEGER NOT NULL,
+    FOREIGN KEY (company_id) REFERENCES companies(id),
+    UNIQUE (company_id, peer_group_name, metric, year)
+);
+CREATE INDEX IF NOT EXISTS idx_peer_percentiles_group_metric ON peer_percentiles(peer_group_name, metric, year);
+
 PRAGMA foreign_keys = ON;
