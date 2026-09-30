@@ -79,3 +79,7 @@ def populate_peer_percentiles(db_path,peer_groups_source="data/raw"):
 if __name__=="__main__":
     p=argparse.ArgumentParser(); p.add_argument("--db",default="db/nifty100.db"); p.add_argument("--peer-groups",default="data/raw"); a=p.parse_args()
     out,msg=populate_peer_percentiles(a.db,a.peer_groups)
+    print(f"peer_percentiles rows: {len(out)}")
+    print(f"peer groups: {out["peer_group_name"].nunique() if not out.empty else 0}")
+    print(f"metrics: {out["metric"].nunique() if not out.empty else 0}")
+    for item in msg: print(item)
