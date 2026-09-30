@@ -1,7 +1,7 @@
 """Contract tests for the Sprint 3 Day 21 review gate."""
 import sqlite3
 from pathlib import Path
-from scripts.day21_sprint_review import check_peer_rank,check_peer_table,check_quality_compounder
+from scripts.day21_sprint_review import check_peer_rank,check_peer_table,check_quality_compounder,check_preset_calibration
 
 def make_db(tmp_path:Path):
     db=tmp_path/"test.db"
@@ -26,3 +26,7 @@ def test_it_services_highest_roe_has_highest_percentile(tmp_path):
 
 def test_peer_table_requires_11_groups(tmp_path):
     assert check_peer_table(make_db(tmp_path)).status=="PASS"
+
+def test_day21_preset_calibration_is_explicit(tmp_path):
+    root=Path(__file__).resolve().parents[2]
+    assert check_preset_calibration(root).status=="PASS"
