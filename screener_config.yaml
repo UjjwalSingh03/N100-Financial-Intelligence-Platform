@@ -1,52 +1,51 @@
-# Sprint 3 Day 15 — Screener configuration
-#
-# Threshold keys:
-# roe_min, de_max, fcf_min, revenue_cagr_5yr_min, pat_cagr_5yr_min,
-# opm_min, pe_max, pb_max, dividend_yield_min, icr_min, market_cap_min,
-# net_profit_min, eps_cagr_min, asset_turnover_min, sales_min.
+# Sprint 3 Day 16 — Six preset screeners
+# Threshold names are interpreted by src/screener/engine.py.
 
 presets:
-  quality:
-    description: "Profitability and balance-sheet quality"
+  quality_compounder:
+    description: "ROE > 15%, D/E < 1, positive FCF, Revenue CAGR 5Y > 10%"
     filters:
       roe_min: 15
       de_max: 1
-      icr_min: 2
-
-  growth:
-    description: "Multi-year growth screen"
-    filters:
-      revenue_cagr_5yr_min: 10
-      pat_cagr_5yr_min: 10
-      eps_cagr_min: 10
-
-  cash_flow:
-    description: "Cash-generation screen"
-    filters:
       fcf_min: 0
-      icr_min: 2
-      asset_turnover_min: 1
+      revenue_cagr_5yr_min: 10
 
-  profitability:
-    description: "Operating and shareholder profitability"
+  value_pick:
+    description: "P/E < 20, P/B < 3, D/E < 2, Dividend Yield > 1%"
     filters:
-      roe_min: 15
-      opm_min: 15
-      asset_turnover_min: 1
-
-  valuation:
-    description: "Valuation threshold screen"
-    filters:
-      pe_max: 30
-      pb_max: 5
+      pe_max: 20
+      pb_max: 3
+      de_max: 2
       dividend_yield_min: 1
 
-  size:
-    description: "Scale and earnings screen"
+  growth_accelerator:
+    description: "PAT CAGR 5Y > 20%, Revenue CAGR 5Y > 15%, D/E < 2"
     filters:
-      market_cap_min: 50000
-      net_profit_min: 100
-      sales_min: 1000
+      pat_cagr_5yr_min: 20
+      revenue_cagr_5yr_min: 15
+      de_max: 2
 
+  dividend_champion:
+    description: "Dividend Yield > 2%, Dividend Payout < 80%, positive FCF"
+    filters:
+      dividend_yield_min: 2
+      dividend_payout_max: 80
+      fcf_min: 0
+
+  debt_free_blue_chip:
+    description: "D/E = 0, ROE > 12%, Revenue > 5000 Crore"
+    filters:
+      de_exact: 0
+      roe_min: 12
+      sales_min: 5000
+
+  turnaround_watch:
+    description: "Revenue CAGR 3Y > 10%, positive latest FCF, declining D/E YoY"
+    filters:
+      revenue_cagr_3yr_min: 10
+      fcf_min: 0
+      de_trend: declining
+
+# Custom filters can be supplied directly through the engine API.
 custom:
   filters: {}
