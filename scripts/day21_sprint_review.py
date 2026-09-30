@@ -96,7 +96,7 @@ def run(root,db_path,report_path,dq_command):
             check_radar_dir(root/"reports"/"radar_charts")]
     summary={"passed":sum(c.ok for c in checks),"blocked":sum(c.status==BLOCKED for c in checks),"failed":sum(c.status==FAIL for c in checks),"total":len(checks)}
     lines=["# Sprint 3 Day 21 — Tests & Sprint Review","","## Automated validation","","| Check | Status | Detail |","|---|---|---|"]
-    for c in checks:lines.append(f"| {c.name} | **{c.status}** | {c.detail.replace('|','\\|').replace(chr(10),' ')} |")
+    for c in checks:\n        detail=c.detail.replace("|","\\|").replace(chr(10)," ")\n        lines.append(f"| {c.name} | **{c.status}** | {detail} |")
     lines += ["","## Definition of Done","",
               "- Six preset screeners each return 5–50 companies.",
               "- screener_output.xlsx contains six preset sheets.",
