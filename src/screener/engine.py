@@ -36,6 +36,10 @@ METRIC_COLUMNS: dict[str, str] = {
     "eps_cagr_min": "eps_cagr_5yr",
     "asset_turnover_min": "asset_turnover",
     "sales_min": "sales",
+    "dividend_payout_max": "dividend_payout_ratio_pct",
+    "de_exact": "debt_to_equity",
+    "revenue_cagr_3yr_min": "revenue_cagr_3yr",
+    "de_trend": "debt_to_equity",
 }
 
 DEFAULT_CONFIG_PATH = Path("screener_config.yaml")
@@ -80,6 +84,11 @@ def _normalise_thresholds(thresholds: Mapping[str, Any] | None) -> dict[str, flo
     """Validate threshold names and convert values to finite floats."""
     result: dict[str, float] = {}
     for name, value in (thresholds or {}).items():
+        if name == "de_trend":
+            if str(value).casefold() != "declining":
+                raise ValueError("de_trend currently supports only 'declining'.")
+            result[name] = str(value)
+            continue
         if name not in METRIC_COLUMNS:
             raise ValueError(
                 f"Unsupported screener filter '{name}'. "
@@ -181,7 +190,25 @@ def apply_filters(
             result = result.loc[values.fillna(float("inf")) >= threshold]
             continue
 
-        if filter_name.endswith("_max"):
+        if filter_name == "dividend_payout_max":
+            result = _apply_maximum(result, column, threshold)
+        elif filter_name == "de_exact":
+            values = pd.to_numeric(result[column], errors="coerce")
+            result = result.loc[values == threshold]
+        elif filter_name == "revenue_cagr_3yr_min":
+            result = _apply_minimum(result, column, threshold)
+        elif filter_name == "de_trend":
+            if threshold != "declining":
+                raise ValueError("de_trend currently supports only 'declining'.")
+            if "company_id" not in result.columns or "year" not in result.columns:
+                raise KeyError("D/E trend filtering requires company_id and year columns.")
+            de = pd.to_numeric(result[column], errors="coerce")
+            years = pd.to_numeric(result["year"].astype(str).str.extract(r"(\\d{4})")[0], errors="coerce")
+            ordered = result.assign(_de=de, _year_num=years).sort_values(["company_id", "_year_num"])
+            previous = ordered.groupby("company_id")["_de"].shift(1)
+            keep = (previous.notna() & ordered["_de"].notna() & (ordered["_de"] < previous))
+            result = ordered.loc[keep].drop(columns=["_de", "_year_num"])
+        elif filter_name.endswith("_max"):
             result = _apply_maximum(result, column, threshold)
         else:
             result = _apply_minimum(result, column, threshold)
