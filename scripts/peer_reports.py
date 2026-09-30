@@ -125,6 +125,7 @@ def add_fcf_score(metrics: pd.DataFrame, memberships: pd.DataFrame) -> pd.DataFr
             pct = pd.Series(np.nan, index=vals.index)
             pct.loc[valid] = (vals.loc[valid].rank(method="min") - 1) / (n - 1)
         merged.loc[idx, "fcf_score"] = pct * 100
+    out["fcf_score"] = merged["fcf_score"].to_numpy()
     # For unassigned companies use the Nifty-100 cross-sectional FCF percentile.
     vals = pd.to_numeric(out["free_cash_flow_cr"], errors="coerce")
     valid = vals.notna()
