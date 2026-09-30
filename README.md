@@ -371,3 +371,18 @@ Implemented the config-driven screener in src/screener/engine.py.
     )
 
 > **Execution note:** Day 15 implementation and unit-test coverage are committed. The engine expects valuation/market metrics such as P/E, P/B, Dividend Yield, Market Cap, Net Profit, and Sales to be present in the input DataFrame when those filters are selected; it does not fabricate missing source metrics.
+
+### Day 16 — Six Preset Screeners
+
+Added six Sprint 3 preset screeners to `screener_config.yaml`:
+
+1. **Quality Compounder** — ROE > 15%, D/E < 1.0, FCF > 0, Revenue CAGR 5Y > 10%.
+2. **Value Pick** — P/E < 20, P/B < 3.0, D/E < 2.0, Dividend Yield > 1%.
+3. **Growth Accelerator** — PAT CAGR 5Y > 20%, Revenue CAGR 5Y > 15%, D/E < 2.0.
+4. **Dividend Champion** — Dividend Yield > 2%, Dividend Payout < 80%, FCF > 0.
+5. **Debt-Free Blue Chip** — D/E = 0, ROE > 12%, Sales/Revenue > ₹5,000 crore.
+6. **Turnaround Watch** — Revenue CAGR 3Y > 10%, positive latest-year FCF, and declining D/E year-over-year.
+
+The Day 15 engine was extended with exact-value, dividend-payout, 3-year CAGR, and D/E trend filters. The D/E trend rule compares each company's chronologically ordered observations and keeps periods where D/E is lower than the preceding observation.
+
+**Review requirement:** each preset must be executed against the full 92-company universe. The required 5–50 result-count range and business-sense review are acceptance criteria and are not claimed as executed until the current production dataset is screened.
