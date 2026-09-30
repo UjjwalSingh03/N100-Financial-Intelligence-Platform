@@ -386,3 +386,21 @@ Added six Sprint 3 preset screeners to `screener_config.yaml`:
 The Day 15 engine was extended with exact-value, dividend-payout, 3-year CAGR, and D/E trend filters. The D/E trend rule compares each company's chronologically ordered observations and keeps periods where D/E is lower than the preceding observation.
 
 **Review requirement:** each preset must be executed against the full 92-company universe. The required 5–50 result-count range and business-sense review are acceptance criteria and are not claimed as executed until the current production dataset is screened.
+
+### Day 17 — Composite Score & Export
+
+Implemented the Sprint 3 composite quality scoring and Excel export foundation.
+
+**Composite score weights**
+- Profitability: 35% — ROE 15%, ROCE 10%, NPM 10%
+- Cash Quality: 30% — FCF CAGR 15%, CFO/PAT 10%, FCF-positive flag 5%
+- Growth: 20% — Revenue CAGR 10%, PAT CAGR 10%
+- Leverage: 15% — D/E 10%, ICR 5%
+
+Each numeric metric is winsorised at the sector-level P10/P90 and scaled to 0–100. D/E is reverse-scaled because lower leverage is preferred. The resulting composite is bounded to 0–100.
+
+Added `src/screener/composite.py` with sector-relative scoring, preset threshold masks, and `output/screener_output.xlsx` generation. The workbook is designed with one sheet per preset, 20 KPI columns, descending composite-score order, freeze panes, autofilter, and green/red threshold cell fills.
+
+Day 17 scoring requires the complete metric set, including ROCE, FCF CAGR, CFO/PAT, valuation, dividend, sales, and net-profit fields. Missing inputs raise an explicit validation error rather than being fabricated.
+
+**Validation status:** unit-test coverage was added, but full 92-company workbook generation requires running the scorer against the project's completed production dataset.
