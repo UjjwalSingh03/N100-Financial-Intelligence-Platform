@@ -468,3 +468,38 @@ python scripts/peer_reports.py --excel --db db/nifty100.db --peer-groups data/ra
 ```
 
 **Validation status:** Day 19/20 implementation and unit-test coverage are committed. Execute the commands against the current production database and source workbook before recording actual chart counts, workbook row counts, or final Sprint 3 sign-off.
+
+
+### Day 21 — Automated Validation & Sprint 3 Review
+
+Implemented the Day 21 Sprint 3 validation and review gate.
+
+**Day 21 deliverables:**
+- `scripts/day21_sprint_review.py` — automated Sprint 3 validation runner.
+- `tests/sprint3/test_day21_sprint_review.py` — Day 21 contract tests.
+- `docs/sprint3_review.md` — Sprint 3 review/report document.
+- `.github/workflows/day21-validation.yml` — GitHub Actions validation workflow.
+- `reports/radar_charts/` — radar-chart artifact directory containing the committed `HDFCBANK_radar.png` artifact and generation README.
+
+**Automated validation covers:**
+- ETL/data-quality test execution.
+- Screener configuration availability.
+- Quality Compounder sanity check.
+- IT Services and FMCG peer-percentile spot checks.
+- Exactly 11 peer groups and all 10 required peer metrics.
+- Six-sheet screener workbook structure and per-preset row-count checks.
+- Eleven-sheet peer-comparison workbook structure.
+- Radar-chart artifact directory validation.
+- Generation of `output/day21_sprint_review.md`.
+
+**GitHub Actions:**
+
+The workflow can be run manually from GitHub Actions or triggered by relevant repository changes. It installs Python dependencies, checks expected validation inputs, runs:
+
+```bash
+python scripts/day21_sprint_review.py --db db/nifty100.db
+```
+
+and uploads available review artifacts.
+
+> **Validation note:** the Day 21 implementation and CI workflow are committed. Final 6/6 PASS status should be recorded only after executing the validator against the current production database and generated workbooks.
