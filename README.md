@@ -335,3 +335,39 @@ Added `notebooks/day14_demo.sql` to display five latest-year companies with the 
 Added `src/analytics/cashflow_kpis.py` as a compatibility module that exposes the Day 11 cash-flow KPI implementation under the deliverable filename requested by the sprint specification.
 
 > **Execution note:** the Day 14 runner is committed, but final status, screener count, row count, null-only columns, anomaly review, and team-lead sign-off must be based on executing it against the current `db/nifty100.db`. The repository does not claim those results until the command is actually run.
+
+
+## Sprint 3 — Screener & Peer Comparison Engine
+
+Sprint 3 builds the configurable financial screener and peer-comparison workflow for Nifty 100 companies.
+
+### Day 15 — Filter Engine Core
+
+Implemented the config-driven screener in src/screener/engine.py.
+
+**Day 15 capabilities:**
+- Loads thresholds and six preset definitions from screener_config.yaml.
+- Supports all 15 required filter metrics: ROE minimum, D/E maximum, FCF minimum, Revenue CAGR 5-year minimum, PAT CAGR 5-year minimum, OPM minimum, P/E maximum, P/B maximum, Dividend Yield minimum, ICR minimum, Market Cap minimum, Net Profit minimum, EPS CAGR minimum, Asset Turnover minimum, and Sales minimum.
+- Automatically skips the D/E threshold for companies in the Financials sector.
+- Treats missing/Debt Free ICR values as infinity so they pass any ICR minimum.
+- Supports named presets plus custom threshold overrides.
+- Returns a deterministic DataFrame sorted by composite_quality_score descending.
+- Added Day 15 unit tests covering Financials D/E handling, Debt Free ICR, combined filters, sorting, invalid filters, missing metrics, YAML presets, and overrides.
+
+**Files added:**
+- src/screener/engine.py
+- src/screener/__init__.py
+- screener_config.yaml
+- tests/screener/test_engine.py
+
+**Usage:**
+
+    from src.screener.engine import screen
+
+    result = screen(
+        financial_ratios_df,
+        preset="quality",
+        thresholds={"roe_min": 20},
+    )
+
+> **Execution note:** Day 15 implementation and unit-test coverage are committed. The engine expects valuation/market metrics such as P/E, P/B, Dividend Yield, Market Cap, Net Profit, and Sales to be present in the input DataFrame when those filters are selected; it does not fabricate missing source metrics.
