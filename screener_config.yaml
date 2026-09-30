@@ -1,0 +1,52 @@
+# Sprint 3 Day 15 — Screener configuration
+#
+# Threshold keys:
+# roe_min, de_max, fcf_min, revenue_cagr_5yr_min, pat_cagr_5yr_min,
+# opm_min, pe_max, pb_max, dividend_yield_min, icr_min, market_cap_min,
+# net_profit_min, eps_cagr_min, asset_turnover_min, sales_min.
+
+presets:
+  quality:
+    description: "Profitability and balance-sheet quality"
+    filters:
+      roe_min: 15
+      de_max: 1
+      icr_min: 2
+
+  growth:
+    description: "Multi-year growth screen"
+    filters:
+      revenue_cagr_5yr_min: 10
+      pat_cagr_5yr_min: 10
+      eps_cagr_min: 10
+
+  cash_flow:
+    description: "Cash-generation screen"
+    filters:
+      fcf_min: 0
+      icr_min: 2
+      asset_turnover_min: 1
+
+  profitability:
+    description: "Operating and shareholder profitability"
+    filters:
+      roe_min: 15
+      opm_min: 15
+      asset_turnover_min: 1
+
+  valuation:
+    description: "Valuation threshold screen"
+    filters:
+      pe_max: 30
+      pb_max: 5
+      dividend_yield_min: 1
+
+  size:
+    description: "Scale and earnings screen"
+    filters:
+      market_cap_min: 50000
+      net_profit_min: 100
+      sales_min: 1000
+
+custom:
+  filters: {}
