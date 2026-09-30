@@ -77,6 +77,21 @@ def check_peer_table(db_path):
         return _check("Peer percentile table",len(groups)==11 and not missing,f"Found {len(groups)} groups and {len(metrics)} required metrics." if not missing else f"Missing metrics: {sorted(missing)}; groups found: {len(groups)}.")
     except Exception as e:return Check("Peer percentile table",FAIL,f"Validation error: {e}")
 
+def check_screener_counts(path):
+    if not path.exists(): return Check("Six preset result counts", BLOCKED, f"Workbook not found: {path}")
+    try:
+        wb=load_workbook(path, read_only=True, data_only=True)
+        bad=[]
+        counts={}
+        for sheet in wb.sheetnames:
+            rows=max(wb[sheet].max_row-1,0)
+            counts[sheet]=rows
+            if not 5 <= rows <= 50: bad.append(f"{sheet}={rows}")
+        return _check("Six preset result counts", len(wb.sheetnames)==6 and not bad,
+                      f"Result counts: {counts}" if not bad else f"Out-of-range sheets: {bad}")
+    except Exception as e:
+        return Check("Six preset result counts", FAIL, f"Could not inspect workbook: {e}")
+
 def check_excel(path,expected,label):
     if not path.exists():return Check(label,BLOCKED,f"Workbook not found: {path}")
     try:
@@ -90,8 +105,8 @@ def check_radar_dir(path):
     return _check("Radar chart artifacts",bool(charts),f"Found {len(charts)} radar PNG files.")
 
 def run(root,db_path,report_path,dq_command):
-    checks=[check_dq_tests(dq_command),check_config(root),check_quality_compounder(db_path),check_peer_rank(db_path),check_peer_table(db_path),
-            check_excel(root/"output"/"screener_output.xlsx",6,"Screener workbook"),
+    checks=[check_dq_tests(dq_command),check_config(root),check_quality_compounder(db_path),check_peer_rank(db_path,"IT Services"),check_peer_rank(db_path,"FMCG"),check_peer_table(db_path),
+            check_excel(root/"output"/"screener_output.xlsx",6,"Screener workbook"),\n            check_screener_counts(root/"output"/"screener_output.xlsx"),
             check_excel(root/"output"/"peer_comparison.xlsx",11,"Peer comparison workbook"),
             check_radar_dir(root/"reports"/"radar_charts")]
     summary={"passed":sum(c.ok for c in checks),"blocked":sum(c.status==BLOCKED for c in checks),"failed":sum(c.status==FAIL for c in checks),"total":len(checks)}
