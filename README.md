@@ -404,3 +404,27 @@ Added `src/screener/composite.py` with sector-relative scoring, preset threshold
 Day 17 scoring requires the complete metric set, including ROCE, FCF CAGR, CFO/PAT, valuation, dividend, sales, and net-profit fields. Missing inputs raise an explicit validation error rather than being fabricated.
 
 **Validation status:** unit-test coverage was added, but full 92-company workbook generation requires running the scorer against the project's completed production dataset.
+
+
+### Day 18 — Peer Percentile Rankings
+
+Implemented `src/analytics/peer.py` for peer-group percentile analysis.
+
+**Day 18 capabilities:**
+- Loads `peer_groups.xlsx` from `data/raw/` (including prefixed workbook filenames).
+- Builds unique company-to-peer-group membership and supports `peer_company_id` membership rows.
+- Computes SQL-style `PERCENT_RANK` within each peer group and year for all 10 required metrics:
+  ROE, ROCE, Net Profit Margin, D/E, FCF, PAT CAGR 5Y, Revenue CAGR 5Y, EPS CAGR 5Y, Interest Coverage, and Asset Turnover.
+- Inverts D/E percentile as `1 - PERCENT_RANK`, so lower leverage receives a higher percentile.
+- Populates the SQLite `peer_percentiles` table with:
+  `company_id, peer_group_name, metric, value, percentile_rank, year`.
+- Companies without a peer-group assignment are excluded from percentile calculation and reported as `No peer group assigned`; they do not raise an error.
+- Added contract tests for percentile math, ties, D/E inversion, all ten metrics, and missing peer groups.
+
+**Run:**
+
+```bash
+python -m src.analytics.peer --db db/nifty100.db --peer-groups data/raw
+```
+
+**Validation status:** implementation and contract tests are committed. Execute the command against the current production database/source workbook to verify the actual number of peer groups, percentile rows, and any unassigned companies.
