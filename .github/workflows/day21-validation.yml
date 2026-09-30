@@ -1,0 +1,74 @@
+name: Day 21 - Sprint 3 Validation
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/day21_sprint_review.py"
+      - "tests/etl/**"
+      - "tests/sprint3/**"
+      - "src/screener/**"
+      - "src/analytics/peer.py"
+      - "screener_config.yaml"
+      - ".github/workflows/day21-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: day21-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  day21-validation:
+    name: Run Day 21 validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install project dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Show Day 21 input availability
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Python: $(python --version)"
+          echo
+          echo "Expected validation inputs:"
+          for path in db/nifty100.db output/screener_output.xlsx output/peer_comparison.xlsx reports/radar_charts; do
+            if [ -e "$path" ]; then
+              echo "FOUND  $path"
+            else
+              echo "MISSING $path"
+            fi
+          done
+
+      - name: Run Day 21 automated validation
+        run: |
+          python scripts/day21_sprint_review.py --db db/nifty100.db
+
+      - name: Upload Day 21 review artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: day21-sprint3-review
+          if-no-files-found: warn
+          path: |
+            output/day21_sprint_review.md
+            output/screener_output.xlsx
+            output/peer_comparison.xlsx
+            output/load_audit.csv
+            output/validation_failures.csv
+            reports/radar_charts/*.png
