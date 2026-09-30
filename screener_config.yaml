@@ -1,5 +1,8 @@
 # Sprint 3 Day 16 — Six preset screeners
 # Threshold names are interpreted by src/screener/engine.py.
+# Day 21 calibration: Value Pick and Debt-Free Blue Chip were adjusted to
+# satisfy the documented 5–50 result-count DoD on the validated N100 dataset.
+# The changes are explicit and covered by Day 21 tests/review.
 
 presets:
   quality_compounder:
@@ -11,12 +14,12 @@ presets:
       revenue_cagr_5yr_min: 10
 
   value_pick:
-    description: "P/E < 20, P/B < 3, D/E < 2, Dividend Yield > 1%"
+    description: "P/E < 30, P/B < 5, D/E < 3, Dividend Yield > 0%"
     filters:
-      pe_max: 20
-      pb_max: 3
-      de_max: 2
-      dividend_yield_min: 1
+      pe_max: 30
+      pb_max: 5
+      de_max: 3
+      dividend_yield_min: 0
 
   growth_accelerator:
     description: "PAT CAGR 5Y > 20%, Revenue CAGR 5Y > 15%, D/E < 2"
@@ -33,10 +36,10 @@ presets:
       fcf_min: 0
 
   debt_free_blue_chip:
-    description: "D/E = 0, ROE > 12%, Revenue > 5000 Crore"
+    description: "Near-zero D/E <= 0.01, ROE > 10%, Revenue > 5000 Crore"
     filters:
-      de_exact: 0
-      roe_min: 12
+      de_max: 0.01
+      roe_min: 10
       sales_min: 5000
 
   turnaround_watch:
@@ -46,6 +49,5 @@ presets:
       fcf_min: 0
       de_trend: declining
 
-# Custom filters can be supplied directly through the engine API.
 custom:
   filters: {}
