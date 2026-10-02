@@ -1,21 +1,51 @@
+"""Sprint 4 Day 25 — trend analysis."""
+from __future__ import annotations
+import plotly.graph_objects as go
 import streamlit as st
+from src.dashboard.utils.db import get_companies, get_trend_data
 
-from src.dashboard.utils.db import get_companies, get_ratios
+METRICS=["ROE","ROCE","Net Profit Margin","Operating Profit Margin","D/E","FCF","Revenue CAGR 5yr","PAT CAGR 5yr","EPS CAGR 5yr","Composite Score"]
 
 def render():
-    st.title("Trends")
-    companies = get_companies()
+    st.title("Trend Analysis")
+    companies=get_companies()
     if companies.empty:
         st.info("Database not available.")
         return
-    ticker_col = next((c for c in ("ticker", "symbol") if c in companies.columns), None)
+    ticker_col=next((c for c in ("ticker","symbol") if c in companies.columns),None)
     if not ticker_col:
         st.error("Company ticker column is missing.")
         return
-    ticker = st.selectbox("Company", sorted(companies[ticker_col].dropna().astype(str).unique()))
-    data = get_ratios(ticker)
-    if data.empty:
-        st.info("No ratio history available.")
+    query=st.text_input("Search company or ticker","")
+    options=companies.copy()
+    if query.strip():
+        mask=options["company_name"].astype(str).str.contains(query.strip(),case=False,na=False)|options[ticker_col].astype(str).str.contains(query.strip(),case=False,na=False)
+        options=options.loc[mask]
+    if options.empty:
+        st.warning("Company not found.")
         return
-    st.line_chart(data.set_index("year") if "year" in data.columns else data.select_dtypes("number"))
-
+    labels=[f'{r["company_name"]} ({r[ticker_col]})' for _,r in options.iterrows()]
+    selected=st.selectbox("Company",labels)
+    ticker=str(options.iloc[labels.index(selected)][ticker_col])
+    metrics=st.multiselect("Metrics (up to 3)",METRICS,default=["ROE"],max_selections=3)
+    if not metrics:
+        st.info("Select at least one metric.")
+        return
+    data=get_trend_data(ticker,tuple(metrics))
+    if data.empty:
+        st.info("No trend history available.")
+        return
+    fig=go.Figure()
+    for metric in metrics:
+        y=data[metric]
+        fig.add_trace(go.Scatter(x=data["year"],y=y,mode="lines+markers",name=metric))
+    fig.update_layout(title="10-Year Financial Trends",xaxis_title="Year",hovermode="x unified")
+    st.plotly_chart(fig,use_container_width=True)
+    st.markdown("### YoY % change")
+    for metric in metrics:
+        vals=data[metric]
+        yoy=vals.pct_change().mul(100)
+        yoy_text=[f"{v:+.1f}%" if v==v else "—" for v in yoy]
+        fig2=go.Figure(go.Scatter(x=data["year"],y=vals,mode="lines+markers+text",text=yoy_text,textposition="top center",name=metric))
+        fig2.update_layout(title=f"{metric} — YoY % annotation",xaxis_title="Year",yaxis_title=metric)
+        st.plotly_chart(fig2,use_container_width=True)
