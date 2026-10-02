@@ -34,6 +34,7 @@ PAGES = {
 
 def _render_page(module_name: str) -> None:
     import importlib
+
     module = importlib.import_module(module_name)
     render = getattr(module, "render", None)
     if render is None:
@@ -53,7 +54,6 @@ def main() -> None:
         key="dashboard_year",
         help="Home and company KPI metrics update for the selected financial year.",
     )
-    st.session_state["dashboard_year"] = int(selected_year)
 
     selected = st.sidebar.radio("Navigate", list(PAGES))
     st.sidebar.divider()
