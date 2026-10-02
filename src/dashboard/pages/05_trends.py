@@ -38,14 +38,15 @@ def render():
     fig=go.Figure()
     for metric in metrics:
         y=data[metric]
-        fig.add_trace(go.Scatter(x=data["year"],y=y,mode="lines+markers",name=metric))
-    fig.update_layout(title="10-Year Financial Trends",xaxis_title="Year",hovermode="x unified")
-    st.plotly_chart(fig,use_container_width=True)
-    st.markdown("### YoY % change")
-    for metric in metrics:
-        vals=data[metric]
-        yoy=vals.pct_change().mul(100)
+        yoy=y.pct_change().mul(100)
         yoy_text=[f"{v:+.1f}%" if v==v else "—" for v in yoy]
-        fig2=go.Figure(go.Scatter(x=data["year"],y=vals,mode="lines+markers+text",text=yoy_text,textposition="top center",name=metric))
-        fig2.update_layout(title=f"{metric} — YoY % annotation",xaxis_title="Year",yaxis_title=metric)
-        st.plotly_chart(fig2,use_container_width=True)
+        fig.add_trace(go.Scatter(
+            x=data["year"], y=y, mode="lines+markers+text", name=metric,
+            text=yoy_text, textposition="top center",
+            hovertemplate=f"%{{x}}<br>{metric}: %{{y:.2f}}<br>YoY: %{{text}}<extra></extra>",
+        ))
+    fig.update_layout(
+        title="10-Year Financial Trends with YoY % Change",
+        xaxis_title="Year", hovermode="x unified",
+    )
+    st.plotly_chart(fig,use_container_width=True)
