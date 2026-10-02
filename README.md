@@ -503,3 +503,40 @@ python scripts/day21_sprint_review.py --db db/nifty100.db
 and uploads available review artifacts.
 
 > **Validation note:** the Day 21 implementation and CI workflow are committed. Final 6/6 PASS status should be recorded only after executing the validator against the current production database and generated workbooks.
+
+
+## Sprint 4 — Dashboard & Valuation Module
+
+### Day 22 — Streamlit App Scaffold
+
+Implemented the Sprint 4 dashboard foundation with an 8-screen Streamlit navigation shell.
+
+**Day 22 deliverables:**
+- `src/dashboard/app.py` — main Streamlit entry point.
+- `src/dashboard/utils/db.py` — shared SQLite data-access helpers.
+- Eight dashboard screens: Home, Profile, Screener, Peers, Trends, Sectors, Capital, and Reports.
+- Streamlit page configuration: wide layout, title `Nifty 100 Analytics`, expanded sidebar.
+- `streamlit` added to `requirements.txt`.
+
+**Shared database helpers:**
+- `get_companies()`
+- `get_ratios(ticker, year=None)`
+- `get_pl(ticker)`
+- `get_bs(ticker)`
+- `get_cf(ticker)`
+- `get_sectors()`
+- `get_peers(group_name)`
+- `get_valuation(ticker)`
+
+All dashboard query helpers use Streamlit's `@st.cache_data(ttl=600)` caching. The utilities return empty DataFrames with user-facing messages when the local database or optional tables are unavailable, so the dashboard scaffold can start without crashing on a missing generated database.
+
+**Run locally:**
+
+```bash
+pip install -r requirements.txt
+streamlit run src/dashboard/app.py
+```
+
+The expected local URL is `http://localhost:8501`.
+
+> **Verification note:** Day 22 source files are committed. Final localhost/browser verification should be performed in an environment containing the generated `db/nifty100.db` and installed dependencies.
