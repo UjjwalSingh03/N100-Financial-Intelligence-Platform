@@ -168,12 +168,24 @@ def get_home_snapshot(year: int, db_path: str = str(DEFAULT_DB_PATH)) -> pd.Data
     SELECT c.id AS company_id, c.company_name, c.ticker, c.sector, c.industry,
            r.year, r.return_on_equity_pct, r.debt_to_equity,
            r.revenue_cagr_5yr, r.composite_quality_score,
-           r.free_cash_flow_cr, r.operating_profit_margin_pct
+           r.free_cash_flow_cr, r.operating_profit_margin_pct,
+           m.market_cap, p.net_profit, p.operating_profit,
+           b.equity_capital, b.reserves, b.borrowings
     FROM companies c
-    LEFT JOIN financial_ratios r
-      ON r.company_id = c.id AND r.year = ?
+    LEFT JOIN financial_ratios r ON r.company_id = c.id AND r.year = ?
+    LEFT JOIN market_cap m ON m.company_id = c.id AND m.year = ?
+    LEFT JOIN profitandloss p ON p.company_id = c.id AND p.year = ?
+    LEFT JOIN balancesheet b ON b.company_id = c.id AND b.year = ?
     """
-    return _query(sql, (year,), db_path)
+    result = _query(sql, (year, year, year, year), db_path)
+    if result.empty:
+        return result
+    for col in ("market_cap", "net_profit", "operating_profit", "equity_capital", "reserves", "borrowings"):
+        result[col] = pd.to_numeric(result[col], errors="coerce")
+    result["pe_ratio"] = result["market_cap"].div(result["net_profit"].where(result["net_profit"] > 0))
+    capital = result["equity_capital"].fillna(0) + result["reserves"].fillna(0) + result["borrowings"].fillna(0)
+    result["roce_pct"] = result["operating_profit"].div(capital.where(capital > 0)).mul(100)
+    return result
 
 
 @st.cache_data(ttl=600)
@@ -184,6 +196,45 @@ def get_profile_ratios(ticker: str, year: int, db_path: str = str(DEFAULT_DB_PAT
 @st.cache_data(ttl=600)
 def get_profile_pl(ticker: str, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
     return get_pl(ticker, db_path)
+
+
+@st.cache_data(ttl=600)
+def get_profile_history(ticker: str, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    company = get_companies(db_path)
+    if company.empty:
+        return pd.DataFrame()
+    ticker_col = next((c for c in ("ticker", "symbol") if c in company.columns), None)
+    id_col = "id" if "id" in company.columns else "company_id"
+    if not ticker_col:
+        return pd.DataFrame()
+    matches = company.loc[company[ticker_col].astype(str).str.upper() == str(ticker).upper()]
+    if matches.empty:
+        return pd.DataFrame()
+    cid = matches.iloc[0][id_col]
+    sql = """
+    SELECT p.year, p.sales, p.net_profit, p.operating_profit,
+           r.return_on_equity_pct, r.revenue_cagr_5yr, r.free_cash_flow_cr,
+           b.equity_capital, b.reserves, b.borrowings
+    FROM profitandloss p
+    LEFT JOIN financial_ratios r ON r.company_id=p.company_id AND r.year=p.year
+    LEFT JOIN balancesheet b ON b.company_id=p.company_id AND b.year=p.year
+    WHERE p.company_id=?
+    ORDER BY p.year
+    """
+    result = _query(sql, (cid,), db_path)
+    if result.empty:
+        return result
+    capital = (
+        pd.to_numeric(result["equity_capital"], errors="coerce").fillna(0)
+        + pd.to_numeric(result["reserves"], errors="coerce").fillna(0)
+        + pd.to_numeric(result["borrowings"], errors="coerce").fillna(0)
+    )
+    result["roce_pct"] = (
+        pd.to_numeric(result["operating_profit"], errors="coerce")
+        .div(capital.where(capital > 0))
+        .mul(100)
+    )
+    return result
 
 
 @st.cache_data(ttl=600)
