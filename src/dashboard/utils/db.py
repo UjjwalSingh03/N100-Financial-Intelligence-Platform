@@ -315,3 +315,153 @@ def get_profile_pros_cons(ticker: str, db_path: str = str(DEFAULT_DB_PATH)) -> p
         (matches.iloc[0][id_col],),
         db_path,
     )
+
+
+@st.cache_data(ttl=600)
+def get_trend_data(
+    ticker: str,
+    metrics: tuple[str, ...] = ("ROE",),
+    db_path: str = str(DEFAULT_DB_PATH),
+) -> pd.DataFrame:
+    """Return 10-year company trend data for up to three selected metrics."""
+    company = get_companies(db_path)
+    if company.empty:
+        return pd.DataFrame()
+    ticker_col = next((c for c in ("ticker", "symbol") if c in company.columns), None)
+    id_col = "id" if "id" in company.columns else "company_id"
+    if not ticker_col:
+        return pd.DataFrame()
+    matches = company.loc[company[ticker_col].astype(str).str.upper() == str(ticker).upper()]
+    if matches.empty:
+        return pd.DataFrame()
+    cid = matches.iloc[0][id_col]
+    metric_map = {
+        "ROE": "r.return_on_equity_pct",
+        "ROCE": "(p.operating_profit / NULLIF(COALESCE(b.equity_capital,0)+COALESCE(b.reserves,0)+COALESCE(b.borrowings,0),0))*100",
+        "Net Profit Margin": "r.net_profit_margin_pct",
+        "Operating Profit Margin": "r.operating_profit_margin_pct",
+        "D/E": "r.debt_to_equity",
+        "FCF": "r.free_cash_flow_cr",
+        "Revenue CAGR 5yr": "r.revenue_cagr_5yr",
+        "PAT CAGR 5yr": "r.pat_cagr_5yr",
+        "EPS CAGR 5yr": "r.eps_cagr_5yr",
+        "Composite Score": "r.composite_quality_score",
+    }
+    selected = [m for m in metrics if m in metric_map][:3]
+    if not selected:
+        return pd.DataFrame()
+    expressions = ", ".join(f"{metric_map[m]} AS \"{m}\"" for m in selected)
+    sql = f"""
+        SELECT p.year, p.sales AS Revenue, p.net_profit AS \"Net Profit\",
+               {expressions}
+        FROM profitandloss p
+        LEFT JOIN financial_ratios r ON r.company_id=p.company_id AND r.year=p.year
+        LEFT JOIN balancesheet b ON b.company_id=p.company_id AND b.year=p.year
+        WHERE p.company_id=?
+        ORDER BY p.year
+    """
+    result = _query(sql, (cid,), db_path)
+    return result.tail(10).reset_index(drop=True) if not result.empty else result
+
+
+@st.cache_data(ttl=600)
+def get_sector_analysis(
+    sector: str,
+    year: int,
+    db_path: str = str(DEFAULT_DB_PATH),
+) -> pd.DataFrame:
+    """Return company-level revenue, ROE, market cap and sub-sector for a sector."""
+    sector_expr = "COALESCE(c.sector, s.sector)"
+    industry_expr = "COALESCE(c.industry, s.industry)"
+    sql = f"""
+        SELECT c.id AS company_id, c.company_name, c.ticker,
+               {sector_expr} AS sector, {industry_expr} AS sub_sector,
+               p.sales AS revenue, r.return_on_equity_pct AS roe,
+               m.market_cap
+        FROM companies c
+        LEFT JOIN sectors s ON s.company_id=c.id
+        LEFT JOIN profitandloss p ON p.company_id=c.id AND p.year=?
+        LEFT JOIN financial_ratios r ON r.company_id=c.id AND r.year=?
+        LEFT JOIN market_cap m ON m.company_id=c.id AND m.year=?
+        WHERE {sector_expr} = ?
+        ORDER BY c.company_name
+    """
+    return _query(sql, (year, year, year, sector), db_path)
+
+
+@st.cache_data(ttl=600)
+def get_sector_groups(db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    """Return distinct sector names from the company universe."""
+    if not _table_columns("companies", db_path):
+        return pd.DataFrame()
+    return _query(
+        "SELECT DISTINCT sector FROM companies WHERE sector IS NOT NULL AND TRIM(sector) <> '' ORDER BY sector",
+        db_path=db_path,
+    )
+
+
+@st.cache_data(ttl=600)
+def get_capital_allocation(year: int, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    """Classify all companies for a selected year into the eight Day 11 patterns."""
+    sql = """
+        SELECT c.id AS company_id, c.company_name, c.ticker,
+               cf.cash_from_operating_activity AS cfo,
+               cf.cash_from_investing_activity AS cfi,
+               cf.cash_from_financing_activity AS cff,
+               p.net_profit AS pat
+        FROM companies c
+        LEFT JOIN cashflow cf ON cf.company_id=c.id AND cf.year=?
+        LEFT JOIN profitandloss p ON p.company_id=c.id AND p.year=?
+        ORDER BY c.company_name
+    """
+    data = _query(sql, (year, year), db_path)
+    if data.empty:
+        return data
+    def sign(v):
+        try:
+            x=float(v)
+            return "+" if x>0 else "-" if x<0 else "0"
+        except (TypeError,ValueError):
+            return "0"
+    def classify(row):
+        s=(sign(row["cfo"]),sign(row["cfi"]),sign(row["cff"]))
+        labels={
+            ("+","-","-"):"Shareholder Returns",
+            ("+","-","+"):"Mixed",
+            ("+","+","+"):"Cash Accumulator",
+            ("+","+","-"):"Liquidating Assets",
+            ("-","+","+"):"Distress Signal",
+            ("-","-","+"):"Growth Funded by Debt",
+            ("-","-","-"):"Pre-Revenue",
+        }
+        return labels.get(s,"Mixed")
+    data["pattern"]=data.apply(classify,axis=1)
+    return data
+
+
+@st.cache_data(ttl=600)
+def get_annual_reports(ticker: str, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    """Return annual-report document rows for a company."""
+    columns = _table_columns("documents", db_path)
+    if not columns:
+        return pd.DataFrame()
+    company = get_companies(db_path)
+    ticker_col = next((c for c in ("ticker", "symbol") if c in company.columns), None)
+    id_col = "id" if "id" in company.columns else "company_id"
+    if not ticker_col:
+        return pd.DataFrame()
+    matches = company.loc[company[ticker_col].astype(str).str.upper() == str(ticker).upper()]
+    if matches.empty:
+        return pd.DataFrame()
+    return _query(
+        """
+        SELECT id, document_type, document_url, document_date
+        FROM documents
+        WHERE company_id=?
+          AND (LOWER(COALESCE(document_type,'')) LIKE '%annual%'
+               OR LOWER(COALESCE(document_type,'')) LIKE '%report%')
+        ORDER BY document_date DESC, id DESC
+        """,
+        (matches.iloc[0][id_col],),
+        db_path,
+    )
