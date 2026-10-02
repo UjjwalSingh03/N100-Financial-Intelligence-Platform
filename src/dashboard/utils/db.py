@@ -404,39 +404,50 @@ def get_sector_groups(db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
 def get_capital_allocation(year: int, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
     """Classify all companies for a selected year into the eight Day 11 patterns."""
     sql = """
-        SELECT c.id AS company_id, c.company_name, c.ticker,
+        SELECT c.id AS company_id, c.company_name, c.ticker, cf.year,
                cf.cash_from_operating_activity AS cfo,
                cf.cash_from_investing_activity AS cfi,
                cf.cash_from_financing_activity AS cff,
                p.net_profit AS pat
         FROM companies c
-        LEFT JOIN cashflow cf ON cf.company_id=c.id AND cf.year=?
-        LEFT JOIN profitandloss p ON p.company_id=c.id AND p.year=?
-        ORDER BY c.company_name
+        LEFT JOIN cashflow cf ON cf.company_id=c.id
+        LEFT JOIN profitandloss p ON p.company_id=c.id AND p.year=cf.year
+        ORDER BY c.id, cf.year
     """
-    data = _query(sql, (year, year), db_path)
+    data = _query(sql, db_path=db_path)
     if data.empty:
         return data
+
+    for col in ("cfo", "cfi", "cff", "pat"):
+        data[col] = pd.to_numeric(data[col], errors="coerce")
+
     def sign(v):
-        try:
-            x=float(v)
-            return "+" if x>0 else "-" if x<0 else "0"
-        except (TypeError,ValueError):
+        if pd.isna(v) or float(v) == 0:
             return "0"
+        return "+" if float(v) > 0 else "-"
+
+    data["cfo_pat"] = data["cfo"].div(data["pat"].where(data["pat"] != 0))
+    data["cfo_quality"] = (
+        data.groupby("company_id")["cfo_pat"]
+        .transform(lambda s: s.rolling(5, min_periods=1).mean())
+    )
+
     def classify(row):
-        s=(sign(row["cfo"]),sign(row["cfi"]),sign(row["cff"]))
-        labels={
-            ("+","-","-"):"Shareholder Returns",
-            ("+","-","+"):"Mixed",
-            ("+","+","+"):"Cash Accumulator",
-            ("+","+","-"):"Liquidating Assets",
-            ("-","+","+"):"Distress Signal",
-            ("-","-","+"):"Growth Funded by Debt",
-            ("-","-","-"):"Pre-Revenue",
+        signs = (sign(row["cfo"]), sign(row["cfi"]), sign(row["cff"]))
+        labels = {
+            ("+","-","+"): "Mixed",
+            ("+","+","+"): "Cash Accumulator",
+            ("+","+","-"): "Liquidating Assets",
+            ("-","+","+"): "Distress Signal",
+            ("-","-","+"): "Growth Funded by Debt",
+            ("-","-","-"): "Pre-Revenue",
         }
-        return labels.get(s,"Mixed")
-    data["pattern"]=data.apply(classify,axis=1)
-    return data
+        if signs == ("+","-","-"):
+            return "Shareholder Returns" if (row["cfo_quality"] or 0) > 1.0 else "Reinvestor"
+        return labels.get(signs, "Mixed")
+
+    data["pattern"] = data.apply(classify, axis=1)
+    return data.loc[data["year"] == year, ["company_id","company_name","ticker","cfo","cfi","cff","pattern"]].reset_index(drop=True)
 
 
 @st.cache_data(ttl=600)
