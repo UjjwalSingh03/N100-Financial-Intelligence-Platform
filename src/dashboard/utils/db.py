@@ -137,6 +137,62 @@ def get_peers(group_name: str | None = None, db_path: str = str(DEFAULT_DB_PATH)
 
 
 @st.cache_data(ttl=600)
+def get_screener_data(year: int, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    sql = """
+    SELECT c.id AS company_id, c.company_name, c.ticker, c.sector,
+           r.year, r.return_on_equity_pct AS roe,
+           r.debt_to_equity AS de,
+           r.free_cash_flow_cr AS fcf,
+           r.revenue_cagr_5yr AS revenue_cagr_5yr,
+           r.pat_cagr_5yr AS pat_cagr_5yr,
+           r.operating_profit_margin_pct AS opm,
+           r.interest_coverage AS icr,
+           r.composite_quality_score AS composite_score,
+           a.pe_ratio, a.pb_ratio, a.dividend_yield_pct AS dividend_yield,
+           r.dividend_payout_ratio_pct AS dividend_payout,
+           r.revenue_cagr_5yr AS revenue_cagr_3yr
+    FROM companies c
+    LEFT JOIN financial_ratios r ON r.company_id=c.id AND r.year=?
+    LEFT JOIN analysis a ON a.company_id=c.id AND a.year=?
+    """
+    return _query(sql, (year, year), db_path)
+
+
+@st.cache_data(ttl=600)
+def get_peer_groups(db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    return get_peers(None, db_path)
+
+
+@st.cache_data(ttl=600)
+def get_peer_comparison(group_name: str, year: int, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    sql = """
+    SELECT pp.company_id, c.company_name, c.ticker, c.sector,
+           pp.metric, pp.value, pp.percentile_rank, pp.year
+    FROM peer_percentiles pp
+    JOIN companies c ON c.id=pp.company_id
+    WHERE pp.peer_group_name=? AND pp.year=?
+    ORDER BY c.company_name, pp.metric
+    """
+    return _query(sql, (group_name, year), db_path)
+
+
+@st.cache_data(ttl=600)
+def get_peer_radar(group_name: str, ticker: str, year: int, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    data = get_peer_comparison(group_name, year, db_path)
+    if data.empty:
+        return data
+    benchmark = data[data["ticker"].astype(str).str.upper() == str(ticker).upper()]
+    avg = data.groupby("metric", as_index=False)["value"].mean()
+    metrics = ["ROE", "ROCE", "Net Profit Margin", "D/E", "FCF", "PAT CAGR 5yr", "Revenue CAGR 5yr", "EPS CAGR 5yr"]
+    rows = []
+    for metric in metrics:
+        b = benchmark.loc[benchmark["metric"].astype(str).str.lower() == metric.lower(), "value"]
+        a = avg.loc[avg["metric"].astype(str).str.lower() == metric.lower(), "value"]
+        rows.append({"metric": metric, "company": b.iloc[0] if not b.empty else None, "peer_average": a.iloc[0] if not a.empty else None})
+    return pd.DataFrame(rows)
+
+
+@st.cache_data(ttl=600)
 def get_valuation(ticker: str, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
     company = get_companies(db_path)
     if company.empty:
