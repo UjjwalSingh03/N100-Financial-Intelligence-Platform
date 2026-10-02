@@ -540,3 +540,37 @@ streamlit run src/dashboard/app.py
 The expected local URL is `http://localhost:8501`.
 
 > **Verification note:** Day 22 source files are committed. Final localhost/browser verification should be performed in an environment containing the generated `db/nifty100.db` and installed dependencies.
+
+
+### Day 23 — Home Screen & Company Profile Screen
+
+Implemented the Day 23 dashboard experience on top of the Day 22 Streamlit shell.
+
+**Home screen:**
+- Six KPI tiles: Average ROE, Median P/E, Median D/E, Total Companies, Median Revenue CAGR 5yr, and Debt-Free Companies.
+- Plotly donut chart for sector breakdown.
+- Top-5 companies by composite quality score.
+- Metrics respond to the global 2019–2024 sidebar year selector.
+- P/E is calculated from market cap / positive net profit when those source values are available.
+
+**Company Profile:**
+- Company/ticker search with a filtered autocomplete-style dropdown.
+- Company card with name, sector, sub-sector/industry, NSE ticker, and database-backed About field with a transparent fallback when no description exists.
+- Six selected-year KPI tiles: ROE, ROCE, Net Profit Margin, D/E, Revenue CAGR 5yr, and FCF.
+- Plotly 10-year Revenue vs Net Profit bar chart.
+- Plotly dual-axis ROE vs ROCE 10-year line chart.
+- Pros/cons rendered with green check and red cross badges.
+- Friendly Ticker not found message for unmatched searches.
+
+**Additional Day 23 data helpers:**
+- get_home_snapshot(year)
+- get_profile_history(ticker)
+- get_profile_pros_cons(ticker)
+- Cached query helpers continue to use Streamlit cache_data with a 600-second TTL.
+
+**Run locally:**
+
+    pip install -r requirements.txt
+    streamlit run src/dashboard/app.py
+
+Then open http://localhost:8501 and use the sidebar year selector to test FY 2019–2024.
