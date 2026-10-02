@@ -574,3 +574,24 @@ Implemented the Day 23 dashboard experience on top of the Day 22 Streamlit shell
     streamlit run src/dashboard/app.py
 
 Then open http://localhost:8501 and use the sidebar year selector to test FY 2019–2024.
+
+
+### Day 24 — Screener & Peer Comparison
+
+Implemented Sprint 4 Day 24 dashboard functionality.
+
+**Screener (`src/dashboard/pages/03_screener.py`)**
+- 10 live sidebar sliders: ROE, D/E, FCF, Revenue CAGR 5yr, PAT CAGR 5yr, OPM, P/E, P/B, Dividend Yield, and ICR.
+- Six preset buttons: Quality, Value, Growth, Dividend, Debt-Free, and Turnaround.
+- Presets auto-fill the corresponding slider thresholds.
+- Results update on Streamlit rerun as filters change.
+- Result count and visible filtered metrics are shown above the table.
+- CSV export contains the same visible columns shown in the results table.
+
+**Peer Comparison (`src/dashboard/pages/04_peers.py`)**
+- Peer-group dropdown sourced from `peer_percentiles`.
+- Benchmark-company selector for the selected peer group.
+- Plotly `Scatterpolar` radar comparing the selected company with peer-group average across 8 metrics.
+- Side-by-side peer KPI table with the benchmark company row highlighted.
+
+The shared dashboard database helpers are cached with a 600-second TTL and are schema-safe for optional P/E/P/B/dividend-yield source columns.
