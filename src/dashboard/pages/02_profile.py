@@ -9,6 +9,7 @@ import streamlit as st
 from src.dashboard.utils.db import (
     get_companies,
     get_profile_pl,
+    get_profile_history,
     get_profile_pros_cons,
     get_profile_ratios,
 )
@@ -74,6 +75,7 @@ def render():
     year = int(st.session_state.get("dashboard_year", 2024))
     ratios = get_profile_ratios(ticker, year)
     pl = get_profile_pl(ticker)
+    history = get_profile_history(ticker)
 
     st.markdown("### Company")
     st.markdown(f"## {row.get('company_name', ticker)}")
@@ -87,7 +89,12 @@ def render():
     r = ratios.iloc[0] if not ratios.empty else pd.Series(dtype=object)
     k = st.columns(6)
     k[0].metric("ROE", _metric(_num(ratios, "return_on_equity_pct"), "%"))
-    k[1].metric("ROCE", _metric(_num(ratios, "return_on_capital_employed_pct"), "%"))
+    roce_value = None
+    if not history.empty and "roce_pct" in history.columns:
+        selected_rows = history[pd.to_numeric(history["year"], errors="coerce") == year]
+        if not selected_rows.empty:
+            roce_value = pd.to_numeric(selected_rows["roce_pct"], errors="coerce").iloc[0]
+    k[1].metric("ROCE", _metric(roce_value, "%"))
     k[2].metric("Net Profit Margin", _metric(_num(ratios, "net_profit_margin_pct"), "%"))
     k[3].metric("D/E", _metric(_num(ratios, "debt_to_equity")))
     k[4].metric("Revenue CAGR 5yr", _metric(_num(ratios, "revenue_cagr_5yr"), "%"))
@@ -115,7 +122,7 @@ def render():
         st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("### ROE & ROCE — 10 years")
-        ratio_hist = get_profile_ratios(ticker, None)
+        ratio_hist = history.copy()
         ratio_hist["year"] = pd.to_numeric(ratio_hist["year"], errors="coerce")
         ratio_hist = ratio_hist.dropna(subset=["year"]).sort_values("year").tail(10)
         fig2 = go.Figure()
@@ -124,10 +131,9 @@ def render():
                 x=ratio_hist["year"], y=pd.to_numeric(ratio_hist["return_on_equity_pct"], errors="coerce"),
                 mode="lines+markers", name="ROE"
             ))
-        roce_col = "return_on_capital_employed_pct"
-        if roce_col in ratio_hist.columns:
+        if "roce_pct" in ratio_hist.columns:
             fig2.add_trace(go.Scatter(
-                x=ratio_hist["year"], y=pd.to_numeric(ratio_hist[roce_col], errors="coerce"),
+                x=ratio_hist["year"], y=pd.to_numeric(ratio_hist["roce_pct"], errors="coerce"),
                 mode="lines+markers", name="ROCE", yaxis="y2"
             ))
         fig2.update_layout(
