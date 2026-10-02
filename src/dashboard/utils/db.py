@@ -138,19 +138,23 @@ def get_peers(group_name: str | None = None, db_path: str = str(DEFAULT_DB_PATH)
 
 @st.cache_data(ttl=600)
 def get_screener_data(year: int, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
-    sql = """
+    """Return one row per company for the selected screener year."""
+    analysis_cols = _table_columns("analysis", db_path)
+    pe_expr = 'a.pe_ratio' if "pe_ratio" in analysis_cols else 'NULL'
+    pb_expr = 'a.pb_ratio' if "pb_ratio" in analysis_cols else 'NULL'
+    dy_expr = 'a.dividend_yield_pct' if "dividend_yield_pct" in analysis_cols else (
+        'a.dividend_yield' if "dividend_yield" in analysis_cols else 'NULL'
+    )
+    sql = f"""
     SELECT c.id AS company_id, c.company_name, c.ticker, c.sector,
            r.year, r.return_on_equity_pct AS roe,
-           r.debt_to_equity AS de,
-           r.free_cash_flow_cr AS fcf,
-           r.revenue_cagr_5yr AS revenue_cagr_5yr,
-           r.pat_cagr_5yr AS pat_cagr_5yr,
+           r.debt_to_equity AS de, r.free_cash_flow_cr AS fcf,
+           r.revenue_cagr_5yr, r.pat_cagr_5yr,
            r.operating_profit_margin_pct AS opm,
            r.interest_coverage AS icr,
            r.composite_quality_score AS composite_score,
-           a.pe_ratio, a.pb_ratio, a.dividend_yield_pct AS dividend_yield,
-           r.dividend_payout_ratio_pct AS dividend_payout,
-           r.revenue_cagr_5yr AS revenue_cagr_3yr
+           {pe_expr} AS pe_ratio, {pb_expr} AS pb_ratio,
+           {dy_expr} AS dividend_yield
     FROM companies c
     LEFT JOIN financial_ratios r ON r.company_id=c.id AND r.year=?
     LEFT JOIN analysis a ON a.company_id=c.id AND a.year=?
