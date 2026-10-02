@@ -1,18 +1,30 @@
+"""Sprint 4 Day 25 — capital allocation map."""
+from __future__ import annotations
+import plotly.express as px
 import streamlit as st
-
-from src.dashboard.utils.db import get_companies, get_cf
+from src.dashboard.utils.db import get_capital_allocation
 
 def render():
-    st.title("Capital Allocation")
-    companies = get_companies()
-    if companies.empty:
-        st.info("Database not available.")
+    st.title("Capital Allocation Map")
+    year=int(st.session_state.get("dashboard_year",2024))
+    data=get_capital_allocation(year)
+    if data.empty:
+        st.info("Capital-allocation data is not available.")
         return
-    ticker_col = next((c for c in ("ticker", "symbol") if c in companies.columns), None)
-    if not ticker_col:
-        st.error("Company ticker column is missing.")
-        return
-    ticker = st.selectbox("Company", sorted(companies[ticker_col].dropna().astype(str).unique()))
-    data = get_cf(ticker)
-    st.dataframe(data, use_container_width=True, hide_index=True) if not data.empty else st.info("No cash-flow data available.")
-
+    counts=data.groupby("pattern",dropna=False).size().reset_index(name="companies")
+    fig=px.treemap(counts,path=["pattern"],values="companies",title=f"Capital Allocation Patterns — {year}")
+    fig.update_traces(textinfo="label+value")
+    event=st.plotly_chart(fig,use_container_width=True,on_select="rerun",selection_mode=["points"])
+    pattern=None
+    if event and getattr(event,"selection",None):
+        points=event.selection.get("points",[])
+        if points:
+            pattern=points[0].get("label")
+    st.caption("Click a pattern in the treemap to view its companies.")
+    if pattern and pattern in set(data["pattern"]):
+        st.subheader(f"{pattern} — Companies")
+        cols=["company_id","company_name","ticker"]
+        st.dataframe(data.loc[data["pattern"]==pattern,cols].sort_values("company_name"),use_container_width=True,hide_index=True)
+    else:
+        st.markdown("### All pattern counts")
+        st.dataframe(counts.sort_values("companies",ascending=False),use_container_width=True,hide_index=True)
