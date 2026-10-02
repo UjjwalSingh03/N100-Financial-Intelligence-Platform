@@ -21,13 +21,11 @@ def _db_path(db_path: str | Path | None = None) -> Path:
 
 @st.cache_data(ttl=600)
 def _query(sql: str, params: tuple = (), db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
-    """Execute one read-only query and return a DataFrame."""
     import sqlite3
 
     path = _db_path(db_path)
     if not path.exists():
         return pd.DataFrame()
-
     with sqlite3.connect(path) as conn:
         return pd.read_sql_query(sql, conn, params=params)
 
@@ -46,10 +44,7 @@ def _table_columns(table: str, db_path: str = str(DEFAULT_DB_PATH)) -> list[str]
 
 @st.cache_data(ttl=600)
 def get_companies(db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
-    return _query(
-        "SELECT * FROM companies ORDER BY company_name, id",
-        db_path=db_path,
-    )
+    return _query("SELECT * FROM companies ORDER BY company_name, id", db_path=db_path)
 
 
 @st.cache_data(ttl=600)
@@ -61,22 +56,16 @@ def get_ratios(
     columns = _table_columns("financial_ratios", db_path)
     if not columns:
         return pd.DataFrame()
-
     company = get_companies(db_path)
     if company.empty:
         return pd.DataFrame()
-
     id_col = "id" if "id" in company.columns else "company_id"
     ticker_col = next((c for c in ("ticker", "symbol") if c in company.columns), None)
     if not ticker_col:
         return pd.DataFrame()
-
-    matches = company.loc[
-        company[ticker_col].astype(str).str.upper() == str(ticker).upper()
-    ]
+    matches = company.loc[company[ticker_col].astype(str).str.upper() == str(ticker).upper()]
     if matches.empty:
         return pd.DataFrame()
-
     company_id = matches.iloc[0][id_col]
     sql = "SELECT * FROM financial_ratios WHERE company_id = ?"
     params: tuple = (company_id,)
@@ -88,6 +77,7 @@ def get_ratios(
     return _query(sql, params, db_path)
 
 
+@st.cache_data(ttl=600)
 def _company_statement(table: str, ticker: str, db_path: str) -> pd.DataFrame:
     columns = _table_columns(table, db_path)
     if not columns:
@@ -97,9 +87,7 @@ def _company_statement(table: str, ticker: str, db_path: str) -> pd.DataFrame:
     id_col = "id" if "id" in company.columns else "company_id"
     if not ticker_col:
         return pd.DataFrame()
-    matches = company.loc[
-        company[ticker_col].astype(str).str.upper() == str(ticker).upper()
-    ]
+    matches = company.loc[company[ticker_col].astype(str).str.upper() == str(ticker).upper()]
     if matches.empty:
         return pd.DataFrame()
     sql = f'SELECT * FROM "{table}" WHERE company_id = ?'
@@ -125,53 +113,94 @@ def get_cf(ticker: str, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
 
 @st.cache_data(ttl=600)
 def get_sectors(db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
-    tables = _table_columns("sectors", db_path)
-    if not tables:
+    if not _table_columns("sectors", db_path):
         return pd.DataFrame()
     return _query("SELECT * FROM sectors ORDER BY 1", db_path=db_path)
 
 
 @st.cache_data(ttl=600)
-def get_peers(
-    group_name: str,
-    db_path: str = str(DEFAULT_DB_PATH),
-) -> pd.DataFrame:
-    columns = _table_columns("peer_percentiles", db_path)
-    if not columns:
+def get_peers(group_name: str | None = None, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    if not _table_columns("peer_percentiles", db_path):
         return pd.DataFrame()
+    if group_name:
+        return _query(
+            "SELECT * FROM peer_percentiles WHERE peer_group_name = ? "
+            "ORDER BY year DESC, metric, percentile_rank DESC",
+            (group_name,),
+            db_path,
+        )
     return _query(
-        "SELECT * FROM peer_percentiles WHERE peer_group_name = ? ORDER BY year DESC, metric, percentile_rank DESC",
-        (group_name,),
-        db_path,
+        "SELECT DISTINCT peer_group_name FROM peer_percentiles "
+        "WHERE peer_group_name IS NOT NULL ORDER BY peer_group_name",
+        db_path=db_path,
     )
 
 
 @st.cache_data(ttl=600)
 def get_valuation(ticker: str, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
-    """Return valuation-related fields when they exist in the database."""
     company = get_companies(db_path)
     if company.empty:
         return pd.DataFrame()
-
     ticker_col = next((c for c in ("ticker", "symbol") if c in company.columns), None)
     id_col = "id" if "id" in company.columns else "company_id"
     if not ticker_col:
         return pd.DataFrame()
-
-    matches = company.loc[
-        company[ticker_col].astype(str).str.upper() == str(ticker).upper()
-    ]
+    matches = company.loc[company[ticker_col].astype(str).str.upper() == str(ticker).upper()]
     if matches.empty:
         return pd.DataFrame()
-
     company_id = matches.iloc[0][id_col]
-    candidates = ["analysis", "financial_ratios", "market_cap"]
-    for table in candidates:
+    for table in ("analysis", "financial_ratios", "market_cap"):
         columns = _table_columns(table, db_path)
         if columns:
+            year_col = "year" if "year" in columns else "metric_year"
             return _query(
-                f'SELECT * FROM "{table}" WHERE company_id = ? ORDER BY year DESC',
+                f'SELECT * FROM "{table}" WHERE company_id = ? ORDER BY "{year_col}" DESC',
                 (company_id,),
                 db_path,
             )
     return pd.DataFrame()
+
+
+@st.cache_data(ttl=600)
+def get_home_snapshot(year: int, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    """One row per company for the selected dashboard year."""
+    sql = """
+    SELECT c.id AS company_id, c.company_name, c.ticker, c.sector, c.industry,
+           r.year, r.return_on_equity_pct, r.debt_to_equity,
+           r.revenue_cagr_5yr, r.composite_quality_score,
+           r.free_cash_flow_cr, r.operating_profit_margin_pct
+    FROM companies c
+    LEFT JOIN financial_ratios r
+      ON r.company_id = c.id AND r.year = ?
+    """
+    return _query(sql, (year,), db_path)
+
+
+@st.cache_data(ttl=600)
+def get_profile_ratios(ticker: str, year: int, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    return get_ratios(ticker, year, db_path)
+
+
+@st.cache_data(ttl=600)
+def get_profile_pl(ticker: str, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    return get_pl(ticker, db_path)
+
+
+@st.cache_data(ttl=600)
+def get_profile_pros_cons(ticker: str, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    columns = _table_columns("prosandcons", db_path)
+    if not columns:
+        return pd.DataFrame()
+    company = get_companies(db_path)
+    ticker_col = next((c for c in ("ticker", "symbol") if c in company.columns), None)
+    id_col = "id" if "id" in company.columns else "company_id"
+    if not ticker_col:
+        return pd.DataFrame()
+    matches = company.loc[company[ticker_col].astype(str).str.upper() == str(ticker).upper()]
+    if matches.empty:
+        return pd.DataFrame()
+    return _query(
+        'SELECT * FROM "prosandcons" WHERE company_id = ? ORDER BY id',
+        (matches.iloc[0][id_col],),
+        db_path,
+    )
