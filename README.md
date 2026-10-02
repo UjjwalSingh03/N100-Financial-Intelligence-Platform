@@ -595,3 +595,40 @@ Implemented Sprint 4 Day 24 dashboard functionality.
 - Side-by-side peer KPI table with the benchmark company row highlighted.
 
 The shared dashboard database helpers are cached with a 600-second TTL and are schema-safe for optional P/E/P/B/dividend-yield source columns.
+
+
+### Day 25 — Remaining Four Dashboard Screens
+
+Implemented the remaining Sprint 4 dashboard screens.
+
+**Trend Analysis (`src/dashboard/pages/05_trends.py`)**
+- Company search by name/ticker.
+- Multi-metric selector with up to three overlaid metrics.
+- Ten-year Plotly line trends.
+- YoY percentage-change annotations are shown for each plotted metric/data point.
+
+**Sector Analysis (`src/dashboard/pages/06_sectors.py`)**
+- Global dashboard year selector is respected.
+- Sector dropdown covering the available sector universe.
+- Plotly bubble/scatter chart with Revenue on X, ROE on Y, Market Cap as bubble size, and sub-sector as colour.
+- Sector median KPI bar chart below the bubble chart.
+
+**Capital Allocation Map (`src/dashboard/pages/07_capital.py`)**
+- Plotly treemap covering the 92-company universe available in the selected year.
+- Uses the eight Day 11 capital-allocation patterns, including the Shareholder Returns/Reinvestor refinement.
+- Selecting a treemap pattern displays the companies classified into that pattern.
+
+**Annual Reports (`src/dashboard/pages/08_reports.py`)**
+- Company search by name/ticker.
+- Lists available annual-report document years.
+- Provides clickable BSE/document PDF links when URLs are available.
+- Performs a lightweight URL check; HTTP 404 responses are shown as a red **Report unavailable** badge.
+- Unverifiable URLs are clearly marked rather than treated as confirmed available.
+
+**Day 25 database helpers**
+- Added cached helpers for trend history, sector analysis, sector groups, capital-allocation classification, and annual-report documents.
+- Helpers use the existing `@st.cache_data(ttl=600)` dashboard caching policy.
+
+Run locally:
+
+    streamlit run src/dashboard/app.py
