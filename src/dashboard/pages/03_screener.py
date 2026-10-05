@@ -62,5 +62,6 @@ def render():
     visible=[c for c in ["company_id","company_name","sector","composite_score","roe","de","fcf","revenue_cagr_5yr","pat_cagr_5yr","opm","pe_ratio","pb_ratio","dividend_yield","icr"] if c in result.columns]
     visible_df=result[visible].copy()
     st.markdown(f"### {len(visible_df)} companies match your filters")
+    visible_df = visible_df.where(visible_df.notna(), "N/A")
     st.dataframe(visible_df,use_container_width=True,hide_index=True)
     st.download_button("Download CSV",visible_df.to_csv(index=False).encode("utf-8"),file_name=f"screener_{year}.csv",mime="text/csv")
