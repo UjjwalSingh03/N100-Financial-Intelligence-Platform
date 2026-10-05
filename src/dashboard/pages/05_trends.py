@@ -35,6 +35,9 @@ def render():
     if data.empty:
         st.info("No trend history available.")
         return
+    available_years = pd.to_numeric(data["year"], errors="coerce").dropna().nunique()
+    if available_years < 10:
+        st.info(f"Data available for {available_years} years; fewer than 10 years are available.")
     fig=go.Figure()
     for metric in metrics:
         y=data[metric]
