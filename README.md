@@ -696,3 +696,59 @@ python scripts/day27_qa.py
 ```
 
 The script prints PASS/FAIL results and profile load timings. A successful run still requires the local browser check of all 8 screens for chart overflow and interactive behavior.
+
+
+## Sprint 4 — Day 28: Retro & Documentation
+
+Day 28 closes Sprint 4 with dashboard documentation, screen descriptions, retrospective notes, and the final acceptance-gate review.
+
+### Run the dashboard
+
+```bash
+pip install -r requirements.txt
+streamlit run src/dashboard/app.py
+```
+
+Open http://localhost:8501.
+
+The dashboard expects db/nifty100.db. The sidebar provides the financial-year selector and navigation across all eight screens.
+
+### Dashboard screen guide
+
+1. **01 · Home** — Six KPI tiles, sector distribution donut, and top five companies by composite quality score.
+2. **02 · Profile** — Company/ticker search, company information, six KPIs, long-term Revenue/Net Profit and ROE/ROCE trends, and pros/cons.
+3. **03 · Screener** — Ten live financial filters, six presets, matching-company table, result count, and CSV export.
+4. **04 · Peers** — Eleven peer groups, benchmark-company selection, eight-metric radar against the peer average, and peer KPI table.
+5. **05 · Trends** — Company search, up to three metrics, ten-year Plotly trends, and YoY changes.
+6. **06 · Sectors** — Sector selection, Revenue vs ROE bubble chart with Market Cap sizing and industry colour grouping, plus sector medians.
+7. **07 · Capital** — Capital-allocation treemap with selectable patterns and company lists.
+8. **08 · Reports** — Annual-report search, document years, PDF links, and explicit available/unverified/unavailable URL status.
+
+### Sprint 4 retrospective and task board
+
+- Retrospective: docs/sprint4_retrospective.md
+- Task board: docs/sprint4_task_board.md
+- Day 27 QA runner: scripts/day27_qa.py
+- Valuation module: src/analytics/valuation.py
+
+The retrospective records UX decisions, data edge cases, performance findings, and remaining live verification gates.
+
+### Day 28 Definition of Done review
+
+Implementation-level deliverables are documented and present in the repository:
+
+- src/dashboard/app.py
+- src/dashboard/pages/01_home.py through 08_reports.py
+- src/dashboard/utils/db.py
+- src/analytics/valuation.py
+- Dashboard run instructions and eight screen descriptions
+- Sprint 4 retrospective and task-board documentation
+
+The following gates intentionally remain pending until verified locally or by the team lead:
+
+- All eight screens load without errors for the 92-company universe.
+- Company Profile load time is below 3 seconds.
+- output/valuation_summary.xlsx contains 92 rows and all required columns.
+- output/valuation_flags.csv is generated and inspected.
+- Sprint 4 live demo is completed.
+- Team-lead sign-off is obtained.
