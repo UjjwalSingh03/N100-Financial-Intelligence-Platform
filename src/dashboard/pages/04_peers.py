@@ -41,7 +41,7 @@ def render():
         fig.add_trace(go.Scatterpolar(r=company_vals+[company_vals[0]],theta=theta+[theta[0]],fill="toself",name=selected))
         fig.add_trace(go.Scatterpolar(r=avg_vals+[avg_vals[0]],theta=theta+[theta[0]],fill="toself",name="Peer average"))
         fig.update_layout(polar=dict(radialaxis=dict(visible=True)),title="Selected Company vs Peer Group Average")
-        st.plotly_chart(fig,use_container_width=True)
+        fig.update_layout(autosize=True, margin=dict(l=20,r=20,t=70,b=20))\n        st.plotly_chart(fig,use_container_width=True)
 
     pivot=data.pivot_table(index=["company_id","company_name","ticker"],columns="metric",values="value",aggfunc="first").reset_index()
     metric_cols=[m for m in METRICS if m in pivot.columns]
