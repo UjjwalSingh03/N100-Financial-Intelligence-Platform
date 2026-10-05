@@ -111,7 +111,7 @@ def get_profile_pl(ticker: str, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataF
 @st.cache_data(ttl=600)
 def get_profile_history(ticker: str, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
     sql = """
-    SELECT pl.year, pl.sales, pl.net_profit, r.return_on_equity_pct AS roe,
+    SELECT DISTINCT pl.year, pl.sales, pl.net_profit, r.return_on_equity_pct AS roe,
            CASE WHEN (COALESCE(bs.equity_capital,0) + COALESCE(bs.reserves,0) + COALESCE(bs.borrowings,0)) <> 0
                 THEN (COALESCE(pl.operating_profit,0) / (COALESCE(bs.equity_capital,0) + COALESCE(bs.reserves,0) + COALESCE(bs.borrowings,0))) * 100.0
                 ELSE NULL END AS roce
@@ -133,9 +133,9 @@ def get_screener_data(year: int, db_path: str = str(DEFAULT_DB_PATH)) -> pd.Data
     market_cap_cols = _table_columns("market_cap", db_path)
     pe_expr = "m.pe_ratio" if "pe_ratio" in market_cap_cols else "NULL"
     pb_expr = "m.pb_ratio" if "pb_ratio" in market_cap_cols else "NULL"
-    dy_expr = "m.dividend_yield" if "dividend_yield" in market_cap_cols else "NULL"
+    dy_expr = ("m.dividend_yield" if "dividend_yield" in market_cap_cols else ("m.dividend_yield_pct" if "dividend_yield_pct" in market_cap_cols else "NULL"))
     sql = f"""
-    SELECT c.id AS company_id, c.company_name, c.ticker, c.sector, r.year,
+    SELECT DISTINCT c.id AS company_id, c.company_name, c.ticker, c.sector, r.year,
            r.return_on_equity_pct AS roe, r.debt_to_equity AS de, r.free_cash_flow_cr AS fcf,
            r.revenue_cagr_5yr, r.pat_cagr_5yr, r.operating_profit_margin_pct AS opm,
            r.interest_coverage AS icr, r.composite_quality_score AS composite_score,
