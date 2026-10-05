@@ -26,14 +26,15 @@ def render():
         st.info("Database not available. Add db/nifty100.db and reload the dashboard.")
         return
 
-    roe = pd.to_numeric(data["return_on_equity_pct"], errors="coerce")
-    pe = pd.to_numeric(data.get("pe_ratio", pd.Series(dtype=float)), errors="coerce")
-    de = pd.to_numeric(data["debt_to_equity"], errors="coerce")
-    cagr = pd.to_numeric(data["revenue_cagr_5yr"], errors="coerce")
+    # get_home_snapshot exposes normalized dashboard aliases rather than raw
+    # source-table column names. Keep the page coupled to those stable names.
+    roe = pd.to_numeric(data.get("roe"), errors="coerce")
+    pe = pd.to_numeric(data.get("pe_ratio"), errors="coerce")
+    de = pd.to_numeric(data.get("de"), errors="coerce")
+    cagr = pd.to_numeric(data.get("revenue_cagr_5yr"), errors="coerce")
+    composite = pd.to_numeric(data.get("composite_score"), errors="coerce")
     debt_free = int((de.fillna(0) == 0).sum())
 
-    # P/E is not part of the current financial_ratios schema. If the loaded DB
-    # contains it, use it; otherwise keep the KPI explicit rather than inventing it.
     cols = st.columns(6)
     cols[0].metric("Average ROE", _fmt(roe.mean(), "%"))
     cols[1].metric("Median P/E", _fmt(pe.median()))
@@ -61,15 +62,13 @@ def render():
 
     with right:
         st.markdown("### Top 5 companies by composite quality score")
-        top = data.copy()
-        top["composite_quality_score"] = pd.to_numeric(
-            top["composite_quality_score"], errors="coerce"
-        )
-        top = top.dropna(subset=["composite_quality_score"]).sort_values(
-            "composite_quality_score", ascending=False
+        top = data.assign(composite_score=composite).dropna(subset=["composite_score"]).sort_values(
+            "composite_score", ascending=False
         ).head(5)
         st.dataframe(
-            top[["company_name", "ticker", "sector", "composite_quality_score"]],
+            top[["company_name", "ticker", "sector", "composite_score"]].rename(
+                columns={"composite_score": "Composite Score"}
+            ),
             use_container_width=True,
             hide_index=True,
         )
