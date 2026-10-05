@@ -59,7 +59,7 @@ def render():
         st.warning(f"Some filter data is unavailable: {exc}")
         result=data.copy()
 
-    visible=[c for c in ["company_id","company_name","sector","composite_score","roe","de","fcf","revenue_cagr_5yr","pat_cagr_5yr","opm","pe_ratio","pb_ratio","dividend_yield","icr"] if c in result.columns]
+    visible=[c for c in ["company_id","company_name","sector","composite_score","roe","de","fcf","revenue_cagr_5yr","pat_cagr_5yr","opm","pe_ratio","pb_ratio","dividend_yield_pct","icr"] if c in result.columns]
     visible_df=result[visible].copy()
     st.markdown(f"### {len(visible_df)} companies match your filters")
     visible_df = visible_df.where(visible_df.notna(), "N/A")
