@@ -31,7 +31,7 @@ def render():
     if not metrics:
         st.info("Select at least one metric.")
         return
-    data=get_trend_data(ticker,tuple(metrics))
+    metric_keys={"ROE":"roe","ROCE":"roce","Revenue":"revenue","Net Profit":"net_profit","EPS":"eps"}\n    data=get_trend_data(ticker,tuple(metric_keys.get(m,m.lower()) for m in metrics))
     if data.empty:
         st.info("No trend history available.")
         return
