@@ -692,7 +692,7 @@ Implemented the Day 27 dashboard integration QA and edge-case hardening.
 ### Run Day 27 QA
 
 ```bash
-python scripts/day27_qa.py
+python scripts/day27_qa.py\npython scripts/day28_acceptance_check.py
 ```
 
 The script prints PASS/FAIL results and profile load timings. A successful run still requires the local browser check of all 8 screens for chart overflow and interactive behavior.
@@ -744,11 +744,11 @@ Implementation-level deliverables are documented and present in the repository:
 - Dashboard run instructions and eight screen descriptions
 - Sprint 4 retrospective and task-board documentation
 
-The following gates intentionally remain pending until verified locally or by the team lead:
+Technical validation has now been completed for the database and valuation deliverables. The following final live/human gates remain:
 
 - All eight screens load without errors for the 92-company universe.
-- Company Profile load time is below 3 seconds.
-- output/valuation_summary.xlsx contains 92 rows and all required columns.
-- output/valuation_flags.csv is generated and inspected.
+- Company Profile load time is below 3 seconds. **Representative data-layer loads are below 3 seconds; final browser timing remains a live check.**
+- output/valuation_summary.xlsx contains 92 rows and all required columns. **Validated locally from the dashboard database.**
+- output/valuation_flags.csv is generated and inspected. **Validated locally; the generated files are available as Day 28 artifacts.**
 - Sprint 4 live demo is completed.
 - Team-lead sign-off is obtained.
