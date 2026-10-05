@@ -632,3 +632,35 @@ Implemented the remaining Sprint 4 dashboard screens.
 Run locally:
 
     streamlit run src/dashboard/app.py
+
+
+## Sprint 4 — Day 26: Valuation Module
+
+Implemented the valuation analytics module in `src/analytics/valuation.py`.
+
+### Day 26 deliverables
+
+- Reads `market_cap.xlsx` from `data/raw` when available, with a normalized SQLite fallback.
+- Calculates FCF yield for the 92-company universe:
+  `FCF / market_cap_crore × 100`.
+- Calculates P/E, P/B and EV/EBITDA when those values are not directly supplied by the source workbook.
+- Calculates the latest-year sector median P/E for each broad sector.
+- Calculates each company's trailing 5-year median P/E.
+- Calculates `PE_vs_sector_median_pct`.
+- Applies valuation flags:
+  - **Caution**: P/E > sector median × 1.5
+  - **Discount**: P/E < sector median × 0.7
+  - **Fair**: otherwise
+- Generates `output/valuation_summary.xlsx`.
+- Generates `output/valuation_flags.csv` containing only Caution and Discount companies.
+
+### Generate outputs
+
+```bash
+python -m src.analytics.valuation --db db/nifty100.db --market-cap data/raw --output-dir output
+```
+
+Expected output files:
+
+- `output/valuation_summary.xlsx`
+- `output/valuation_flags.csv`
