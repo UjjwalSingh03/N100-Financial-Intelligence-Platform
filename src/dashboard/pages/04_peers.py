@@ -27,10 +27,10 @@ def render():
     name_map=dict(zip(companies["id"],companies["company_name"]))
     ticker_map=dict(zip(companies["id"],companies[ticker_col])) if ticker_col else {}
     ids=sorted(data["company_id"].dropna().astype(str).unique())
-    labels=[f"{name_map.get(int(cid),cid)} ({ticker_map.get(int(cid),'')})" for cid in ids]
+    labels=[f"{name_map.get(cid,cid)} ({ticker_map.get(cid,'')})" for cid in ids]
     selected=st.selectbox("Benchmark company",labels)
     selected_id=ids[labels.index(selected)]
-    selected_ticker=str(ticker_map.get(int(selected_id),""))
+    selected_ticker=str(ticker_map.get(selected_id,""))
 
     radar=get_peer_radar(group,selected_ticker,year)
     if not radar.empty:
@@ -41,7 +41,8 @@ def render():
         fig.add_trace(go.Scatterpolar(r=company_vals+[company_vals[0]],theta=theta+[theta[0]],fill="toself",name=selected))
         fig.add_trace(go.Scatterpolar(r=avg_vals+[avg_vals[0]],theta=theta+[theta[0]],fill="toself",name="Peer average"))
         fig.update_layout(polar=dict(radialaxis=dict(visible=True)),title="Selected Company vs Peer Group Average")
-        fig.update_layout(autosize=True, margin=dict(l=20,r=20,t=70,b=20))\n        st.plotly_chart(fig,use_container_width=True)
+        fig.update_layout(autosize=True, margin=dict(l=20,r=20,t=70,b=20))
+        st.plotly_chart(fig,use_container_width=True)
 
     pivot=data.pivot_table(index=["company_id","company_name","ticker"],columns="metric",values="value",aggfunc="first").reset_index()
     metric_cols=[m for m in METRICS if m in pivot.columns]
