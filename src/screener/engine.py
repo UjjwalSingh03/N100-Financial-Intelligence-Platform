@@ -104,8 +104,8 @@ def _normalise_thresholds(thresholds: Mapping[str, Any] | None) -> dict[str, flo
 def _resolve_column(frame: pd.DataFrame, canonical: str) -> str:
     """Resolve a canonical metric to a DataFrame column using common aliases."""
     aliases = {
-        "pe": ["pe", "p_e", "price_to_earnings"],
-        "pb": ["pb", "p_b", "price_to_book"],
+        "pe": ["pe", "pe_ratio", "p_e", "price_to_earnings"],
+        "pb": ["pb", "pb_ratio", "p_b", "price_to_book"],
         "dividend_yield_pct": ["dividend_yield_pct", "dividend_yield"],
         "market_cap": ["market_cap", "market_cap_cr"],
         "net_profit": ["net_profit", "net_profit_cr"],
