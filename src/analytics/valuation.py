@@ -240,9 +240,14 @@ def _add_valuation_flags(frame: pd.DataFrame) -> pd.DataFrame:
     frame["sector"] = frame["sector"].fillna("Unknown").replace("", "Unknown")
     frame["P/E"] = pd.to_numeric(frame["P/E"], errors="coerce")
 
+    numeric_year = pd.to_numeric(frame["year"], errors="coerce")
+    latest_year = numeric_year.max()
+    latest = frame.loc[
+        numeric_year.eq(latest_year) & frame["P/E"].gt(0),
+        ["sector", "P/E"],
+    ]
     sector_medians = (
-        frame.loc[frame["P/E"].gt(0)]
-        .groupby("sector")["P/E"]
+        latest.groupby("sector")["P/E"]
         .median()
         .rename("sector_median_pe")
     )
