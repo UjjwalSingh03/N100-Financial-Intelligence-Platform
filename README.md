@@ -664,3 +664,35 @@ Expected output files:
 
 - `output/valuation_summary.xlsx`
 - `output/valuation_flags.csv`
+
+
+## Sprint 4 — Day 27: Integration QA & Bug Fixes
+
+Implemented the Day 27 dashboard integration QA and edge-case hardening.
+
+### QA coverage
+
+- Added `scripts/day27_qa.py`.
+- Uses 10 representative tickers across IT, Financials, FMCG, Energy, Healthcare and other major sectors.
+- Verifies the 92-company database.
+- Imports all 8 Streamlit dashboard page modules.
+- Checks companies with partial historical data and reports the number of available years.
+- Exercises screener filters at extreme minimum and maximum values.
+- Measures five Company Profile data-load timings and fails when a load exceeds 3 seconds.
+- Keeps visual/browser interaction checks explicit because they require the local Streamlit runtime.
+
+### Bug fixes
+
+- Added `N/A` display handling for missing screener metrics.
+- Added partial-history information messages to Company Profile and Trend Analysis.
+- Fixed screener metric aliases so dashboard columns such as `pe_ratio`, `pb_ratio` and `composite_score` work with the existing screener engine.
+- Fixed peer comparison to support ticker/string company IDs instead of assuming numeric IDs.
+- Kept Plotly charts responsive with `use_container_width=True` and responsive layout margins.
+
+### Run Day 27 QA
+
+```bash
+python scripts/day27_qa.py
+```
+
+The script prints PASS/FAIL results and profile load timings. A successful run still requires the local browser check of all 8 screens for chart overflow and interactive behavior.
