@@ -101,6 +101,9 @@ def render():
     k[5].metric("FCF", _metric(_num(ratios, "free_cash_flow_cr"), " Cr"))
 
     st.caption(f"Financial KPIs for FY {year}")
+    available_years = pd.to_numeric(history.get("year", pd.Series(dtype=float)), errors="coerce").dropna().nunique()
+    if available_years < 10:
+        st.info(f"Data available for {available_years} years; fewer than 10 years are available for this company.")
 
     if pl.empty:
         st.info("No P&L history available for this company.")
