@@ -772,7 +772,7 @@ Implemented the Day 29 NLP analysis-text parsing foundation in `src/nlp/parser.p
   `company_id, metric_type, period_years, value_pct`.
 - Logs unmatched target text and missing target fields to `output/parse_failures.csv`.
 - Cross-validates 5-year sales/profit CAGR values against the Ratio Engine's `revenue_cagr_5yr` and `pat_cagr_5yr`.
-- Flags divergences greater than 5 percentage points as `MANUAL_REVIEW` in `output/cagr_divergences.csv`.
+- Flags relative divergences greater than 5% as `MANUAL_REVIEW` in `output/cagr_divergences.csv`.
 - Added automated contract tests in `tests/nlp/test_parser.py`.
 - Added `src/nlp/__init__.py`.
 
