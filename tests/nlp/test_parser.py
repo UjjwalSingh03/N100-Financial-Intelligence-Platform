@@ -137,3 +137,40 @@ def test_cross_validation_with_latest_sqlite_row(tmp_path):
     ratios = read_ratio_values(db_path)
     assert len(ratios) == 1
     assert int(ratios.iloc[0]["year"]) == 2024
+
+
+def test_cross_validation_uses_relative_five_percent_threshold():
+    parsed = pd.DataFrame([
+        {
+            "company_id": "INFY",
+            "metric_type": "compounded_sales_growth",
+            "period_years": 5,
+            "value_pct": 10.5,
+        },
+        {
+            "company_id": "TCS",
+            "metric_type": "compounded_sales_growth",
+            "period_years": 5,
+            "value_pct": 10.51,
+        },
+    ])
+    ratios = pd.DataFrame([
+        {
+            "company_id": "INFY",
+            "year": 2024,
+            "revenue_cagr_5yr": 10.0,
+            "pat_cagr_5yr": 8.0,
+        },
+        {
+            "company_id": "TCS",
+            "year": 2024,
+            "revenue_cagr_5yr": 10.0,
+            "pat_cagr_5yr": 8.0,
+        },
+    ])
+
+    divergences = cross_validate(parsed, ratios)
+
+    assert len(divergences) == 1
+    assert divergences.iloc[0]["company_id"] == "TCS"
+    assert abs(float(divergences.iloc[0]["divergence_pct"]) - 5.1) < 0.01
