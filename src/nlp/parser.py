@@ -220,7 +220,7 @@ def cross_validate(
     parsed_df: pd.DataFrame,
     ratios_df: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Flag 5-year CAGR divergence greater than 5 percentage points."""
+    """Flag 5-year CAGR relative divergence greater than 5%."""
     if parsed_df.empty or ratios_df.empty:
         return pd.DataFrame(columns=DIVERGENCE_COLUMNS)
 
@@ -240,7 +240,10 @@ def cross_validate(
 
         parsed_value = float(item["value_pct"])
         engine_value = float(matches.iloc[0][ratio_col])
-        divergence = abs(parsed_value - engine_value)
+        if engine_value == 0:
+            divergence = 0.0 if parsed_value == 0 else float("inf")
+        else:
+            divergence = abs(parsed_value - engine_value) / abs(engine_value) * 100.0
 
         if divergence > 5.0:
             rows.append({
