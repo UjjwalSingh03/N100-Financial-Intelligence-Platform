@@ -1,0 +1,18 @@
+company_id,metric_type,source_column,source_text,reason
+SBILIFE,compounded_sales_growth,compounded_sales_growth,TTM:            43%,text does not match required regex
+SBILIFE,compounded_profit_growth,compounded_profit_growth,TTM:                 18%,text does not match required regex
+SBILIFE,stock_price_cagr,stock_price_cagr,1 Year:         -2%,text does not match required regex
+SBILIFE,roe,roe,Last Year:      12%,text does not match required regex
+TCS,compounded_sales_growth,compounded_sales_growth,TTM:            5%,text does not match required regex
+TCS,compounded_profit_growth,compounded_profit_growth,TTM:                 8%,text does not match required regex
+TCS,roe,roe,Last Year:       52%,text does not match required regex
+WIPRO,stock_price_cagr,stock_price_cagr,3 Years:      -1%,text does not match required regex
+WIPRO,compounded_sales_growth,compounded_sales_growth,TTM:           -3%,text does not match required regex
+WIPRO,compounded_profit_growth,compounded_profit_growth,TTM:                 1%,text does not match required regex
+WIPRO,roe,roe,Last Year:       14%,text does not match required regex
+HDFCBANK,compounded_sales_growth,compounded_sales_growth,TTM:            47%,text does not match required regex
+HDFCBANK,compounded_profit_growth,compounded_profit_growth,TTM:                27%,text does not match required regex
+HDFCBANK,roe,roe,Last Year:    17%,text does not match required regex
+INFY,compounded_sales_growth,compounded_sales_growth,TTM:            3%,text does not match required regex
+INFY,compounded_profit_growth,compounded_profit_growth,TTM:                 8%,text does not match required regex
+INFY,roe,roe,Last Year:     32%,text does not match required regex
