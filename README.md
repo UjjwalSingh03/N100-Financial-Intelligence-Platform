@@ -785,3 +785,29 @@ python -m src.nlp.parser --analysis data/raw/analysis.xlsx --db db/nifty100.db -
 The source workbook must be present in `data/raw/` before generating production CSV outputs. The parser does not fabricate missing source data.
 
 **Validation note:** the Day 29 implementation and contract tests are committed. Production parse counts and divergence counts should be recorded only after running the parser against the actual `analysis.xlsx` source workbook.
+
+### Day 30 — NLP Auto Pros/Cons Generator
+
+Implemented the Day 30 rule-based NLP pros/cons generator in `src/nlp/pros_cons_generator.py`.
+
+**Day 30 deliverables:**
+- Implemented all **12 Pro rules (P01–P12)** covering sustained ROE above 20%, 5-year positive FCF, debt-free balance sheet, Revenue CAGR above 15%, OPM above 25%, PAT CAGR above 20%, high ICR/debt-free status, dividend yield above 2% backed by positive FCF, EPS CAGR above 15%, improving ROE for 3 years, operating leverage, and growing assets with declining debt.
+- Implemented all **12 Con rules (C01–C12)** covering elevated D/E, 3-year negative FCF, declining OPM, latest-year net loss, revenue contraction, ICR below 1.5x, dividend payout above 100%, rising D/E, declining EPS, ROCE below 10%, Net Debt above 3× EBITDA, and Revenue CAGR below 5%.
+- Added confidence scoring from **0–100** based on signal strength.
+- Only signals with **confidence > 60%** are included in the generated output.
+- Added strict coverage validation to ensure every company has at least **one Pro and one Con** signal.
+- Added `output/pros_cons_generated.csv` with columns: `company_id, type, rule_id, text, confidence_pct`.
+- Added automated tests in `tests/nlp/test_pros_cons_generator.py` covering the rule engine, confidence threshold, output contract, and coverage validation.
+- Added detailed Day 30 documentation in `docs/day30_nlp_pros_cons.md`.
+
+**Run:**
+
+```bash
+python -m src.nlp.pros_cons_generator \
+  --db db/nifty100.db \
+  --output output/pros_cons_generated.csv
+```
+
+**Coverage validation:** the production command fails if any company in the `companies` table does not receive at least one Pro and one Con. This prevents unsupported or fabricated pros/cons from being reported.
+
+**Validation note:** Day 30 implementation and tests are committed. Final 92-company output counts should only be recorded after running the generator against the actual production `db/nifty100.db`.
