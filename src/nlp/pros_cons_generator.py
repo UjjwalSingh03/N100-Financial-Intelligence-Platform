@@ -60,7 +60,7 @@ def read_table(con,table,fields):
     for f in fields:
         c=pick(cs,f,f.replace("_pct",""),f.replace("_cr",""))
         sel.append(f'"{c}" AS "{f}"' if c else f'NULL AS "{f}"')
-    return latest(pd.read_sql_query(f'SELECT {",".join(sel)} FROM "{table}"',con))
+    return pd.read_sql_query(f'SELECT {",".join(sel)} FROM "{table}"',con)
 
 def history(con,cid):
     pnl=read_table(con,"profitandloss",["sales","operating_profit","opm_percentage","net_profit","eps","depreciation"])
@@ -153,7 +153,7 @@ def generate(db_path:Path,output:Path,strict=True):
                 for k,v in latest_row.items():
                     if k!="year":row[k]=v
             rr=read_table(con,"financial_ratios",["return_on_equity_pct","operating_profit_margin_pct","debt_to_equity","interest_coverage","free_cash_flow_cr","earnings_per_share","dividend_payout_ratio_pct","revenue_cagr_5yr","pat_cagr_5yr","eps_cagr_5yr","total_debt_cr"])
-            rr=rr[rr.company_id.astype(str)==cid]
+            rr=rr[rr.company_id.astype(str)==cid].sort_values("year")
             if not rr.empty:
                 for k,v in rr.iloc[-1].items():
                     if k not in ("company_id","year"):row[k]=v
