@@ -811,3 +811,19 @@ python -m src.nlp.pros_cons_generator \
 **Coverage validation:** the production command fails if any company in the `companies` table does not receive at least one Pro and one Con. This prevents unsupported or fabricated pros/cons from being reported.
 
 **Validation note:** Day 30 implementation and tests are committed. Final 92-company output counts should only be recorded after running the generator against the actual production `db/nifty100.db`.
+
+
+### Day 31 — Cash Flow Intelligence Module
+
+- Implemented `src/analytics/cashflow_kpis.py` for CFO/PAT quality scoring, CapEx intensity, five-year FCF CAGR, FCF conversion, distress detection, deleveraging detection, and capital-allocation labels.
+- Generates `output/cashflow_intelligence.xlsx` with the requested company-level KPI columns.
+- Generates `output/distress_alerts.csv` with flagged companies, CFO, CFF, and latest net profit.
+- Added integration tests in `tests/analytics/test_cashflow_kpis.py` and calculation/acceptance notes in `docs/day31_cashflow_intelligence.md`.
+
+**Run:**
+
+```bash
+python -m src.analytics.cashflow_kpis --db db/nifty100.db --output-dir output
+```
+
+**Validation:** the automated integration tests and full production output generation must be run against the actual database before recording final 92-company counts or claiming the production workbook passed.
