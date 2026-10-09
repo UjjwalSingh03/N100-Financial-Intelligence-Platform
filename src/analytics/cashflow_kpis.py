@@ -144,8 +144,9 @@ def calculate_cashflow_intelligence(db_path: str | Path) -> tuple[pd.DataFrame, 
         fcf_series = pd.Series(fcf_by_year, dtype=float).sort_index()
         fcf_cagr = _fcf_cagr(fcf_series, 5)
         latest_fcf = fcf_by_year.get(latest_year) if latest_year is not None else None
-        # Conversion is defined as FCF / PAT; percentage is undefined for zero/missing PAT.
-        conversion = latest_fcf / latest_pat * 100 if latest_fcf is not None and latest_pat not in (None, 0) else None
+        op_col = _find_col(pl, "operating_profit", "ebit")
+        latest_operating_profit = _number(latest_pl.get(op_col)) if op_col else None
+        conversion = fcf_conversion_rate(latest_fcf, latest_operating_profit)
 
         distress = cfo is not None and cff is not None and cfo < 0 and cff > 0
         debt_series = [(int(r.year), _number(r.get(debt_col))) for _, r in bsc.iterrows()] if debt_col else []
