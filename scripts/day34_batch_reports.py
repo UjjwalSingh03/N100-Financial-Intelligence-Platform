@@ -12,7 +12,7 @@ from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle, Spacer
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle, Spacer, PageBreak
 from src.reports.tearsheet import generate
 
 METRICS = ("Revenue", "Net Profit", "OPM %", "ROE %", "D/E", "EPS", "CFO", "FCF")
@@ -88,7 +88,7 @@ def sector_report(path, sector, companies, con):
            Spacer(1,16),para(f"Companies: {len(companies)} | Median KPIs"),Spacer(1,8)]
     summary=Table([[para(k),para(f"{v:,.2f}" if v is not None else "N/A")] for k,v in zip(METRICS,med)],colWidths=[210,290])
     summary.setStyle(TableStyle([("WORDWRAP",(0,0),(-1,-1),"CJK"),("GRID",(0,0),(-1,-1),.25,colors.lightgrey),("VALIGN",(0,0),(-1,-1),"TOP")]))
-    story.extend([summary,Spacer(1,18),para("Company metrics (latest available annual record)"),Spacer(1,8)])
+    story.extend([summary,PageBreak(),para("Company metrics (latest available annual record)"),Spacer(1,8)])
     data=[[para(k) for k in ("Ticker",*METRICS)]]
     for ticker,values in zip(companies,records):
         data.append([para(ticker)]+[para(f"{v:,.1f}" if v is not None else "N/A") for v in values])
