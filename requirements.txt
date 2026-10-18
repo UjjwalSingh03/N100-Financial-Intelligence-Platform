@@ -33,3 +33,7 @@ jupyter>=1.0,<2
 
 # Dashboard
 streamlit>=1.40,<2
+
+# PDF tearsheet reporting (Day 33)
+reportlab>=4.2,<5
+pypdf>=5,<7
