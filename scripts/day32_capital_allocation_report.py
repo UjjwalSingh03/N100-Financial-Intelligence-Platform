@@ -19,7 +19,7 @@ def run(db_path="db/nifty100.db", csv_path="output/capital_allocation.csv",
     missing_cols = set(REQUIRED) - set(data.columns)
     if missing_cols:
         raise ValueError(f"Missing columns: {sorted(missing_cols)}")
-    data = data.loc[:, REQUIRED].copy()
+    data = data.loc[:, list(REQUIRED)].copy()
     data["company_id"] = data.company_id.str.strip()
     data["year"] = data.year.str.strip()
     data["pattern_label"] = data.pattern_label.str.strip()
@@ -79,7 +79,7 @@ def run(db_path="db/nifty100.db", csv_path="output/capital_allocation.csv",
     with pd.ExcelWriter(workbook, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
         intelligence.to_excel(writer, sheet_name="Cash Flow Intelligence", index=False)
     if repair:
-        data.loc[:, REQUIRED].to_csv(csv_path, index=False)
+        data.loc[:, list(REQUIRED)].to_csv(csv_path, index=False)
     print(f"Day 32 complete: {latest}; {len(latest_rows)} companies; {len(changes)} year-over-year changes.")
     return latest
 
