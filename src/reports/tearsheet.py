@@ -29,7 +29,7 @@ PATTERNS = ("Reinvestor", "Shareholder Returns", "Liquidating Assets", "Distress
 def _rows(con, table, ticker):
     if not con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
         return []
-    return [dict(r) for r in con.execute(f'SELECT * FROM "{table}" WHERE company_id=? ORDER BY year', (ticker,))]
+    order = "year" if table != "prosandcons" else "id"\n    return [dict(r) for r in con.execute(f'SELECT * FROM "{table}" WHERE company_id=? ORDER BY {order}', (ticker,))]
 
 
 def _num(v):
@@ -129,6 +129,21 @@ def _bullets(c, x, top, w, title, items, color, limit=4):
     return y
 
 
+def _stacked_balance(c, x, top, w, h, rows):
+    y = _panel(c, x, top, w, h, "Balance Sheet Composition — 10 Years")
+    series = []
+    for r in rows[-10:]:
+        eq = (_num(r.get("equity_capital")) or 0) + (_num(r.get("reserves")) or 0)
+        series.append((str(r["year"]), [max(0,eq), max(0,_num(r.get("borrowings")) or 0),
+                                         max(0,_num(r.get("other_liabilities")) or 0)]))
+    scale = max([sum(v) for _,v in series] or [1]) or 1
+    for i,(yr,values) in enumerate(series):
+        bx=x+13+i*(w-26)/max(1,len(series)); by=y+20
+        for value,color in zip(values,(GREEN,colors.HexColor("#4775AD"),colors.HexColor("#C3A36A"))):
+            bh=value/scale*(h-52); c.setFillColor(color); c.rect(bx,by,(w-26)/max(1,len(series))*.65,bh,stroke=0,fill=1); by+=bh
+        c.setFillColor(MUTED); c.setFont("Helvetica",6); c.drawString(bx,y+8,yr[-2:])
+
+
 def _waterfall(c, x, top, w, h, cf):
     y = _panel(c, x, top, w, h, "Cash Flow Waterfall — Latest Year")
     keys = [("CFO", "cash_from_operating_activity"), ("CFI", "cash_from_investing_activity"),
@@ -195,12 +210,12 @@ def generate(db_path, ticker, output_path, capital_csv="output/capital_allocatio
     c.showPage()
     c.setFillColor(NAVY); c.rect(0,PAGE_H-58,PAGE_W,58,fill=1,stroke=0)
     c.setFillColor(colors.white); c.setFont("Helvetica-Bold",14); c.drawString(MARGIN,PAGE_H-36,f"{ticker}  |  Financial Position & Signals")
-    # A compact stacked composition table preserves all annual values and uses WORDWRAP.
+    # Compact stacked composition bars with a wrapped annual-value table below.\n    _stacked_balance(c, MARGIN, PAGE_H-79, WIDTH, 104, bs)
     b_rows=[]
     for r in bs[-10:]:
         equity=(_num(r.get("equity_capital")) or 0)+(_num(r.get("reserves")) or 0)
         b_rows.append((r["year"],_fmt(equity),_fmt(r.get("borrowings")),_fmt(r.get("other_liabilities"))))
-    y=_table(c,MARGIN,PAGE_H-79,WIDTH,"Balance Sheet Composition — 10 Years",
+    y=_table(c,MARGIN,PAGE_H-192,WIDTH,"Balance Sheet Composition — Annual Values",
              ("Year","Equity + Reserves","Borrowings","Other Liabilities"),b_rows)
     _waterfall(c,MARGIN,y-16,WIDTH,135,latest_c)
     y=y-168
