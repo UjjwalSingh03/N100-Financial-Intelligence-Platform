@@ -37,3 +37,8 @@ streamlit>=1.40,<2
 # PDF tearsheet reporting (Day 33)
 reportlab>=4.2,<5
 pypdf>=5,<7
+
+# REST API (Sprint 6)
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+httpx>=0.27,<1  # FastAPI TestClient
