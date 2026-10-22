@@ -929,3 +929,22 @@ python -m src.analytics.cluster_profiling --db db/nifty100.db
 ```
 
 **Day 37 status:** Implementation is committed. Production statistics, heatmap inspection, actual outlier counts, cluster membership review, final cluster-name adjustments, and team-lead approval remain pending.
+
+
+### Day 38 — FastAPI Server Scaffold
+
+- Added `src/api/main.py` with FastAPI, internal-use wildcard CORS (credentials disabled), request logging (method/path/response time/status), and version `0.1.0`.
+- Added `src/api/db.py` for per-request read-only SQLite connections, configurable with `N100_DB_PATH`. Missing databases return HTTP 503 rather than creating an empty file.
+- Created eight router modules under `src/api/routers/`: companies, screener, sectors, peers, valuation, portfolio, documents, and health. All are mounted under `/api/v1`; business endpoints are reserved for subsequent days.
+- Implemented `GET /api/v1/health` returning `status`, `db_row_counts`, `uptime_seconds`, and `version`. Counts cover ten core tables: companies, profitandloss, balancesheet, cashflow, analysis, documents, prosandcons, sectors, stock_prices, financial_ratios. The schema also defines supplementary tables; the ten core counts match this Day 38 health contract.
+- Added `tests/api/test_day38_scaffold.py` for health, missing DB, OpenAPI docs, and CORS.
+
+```bash
+pip install -r requirements.txt
+uvicorn src.api.main:app --port 8000
+# Browse http://127.0.0.1:8000/docs
+# Browse http://127.0.0.1:8000/api/v1/health
+pytest tests/api/test_day38_scaffold.py -v
+```
+
+**Day 38 status:** Scaffold, dependencies, tests, and documentation committed. Local Uvicorn startup and browser/OpenAPI verification still need to be run in an environment with dependencies installed. Wildcard CORS must be restricted before any public deployment.
