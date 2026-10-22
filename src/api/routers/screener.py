@@ -12,11 +12,11 @@ FILTERS = {"min_roe": ("roe_pct", True), "max_de": ("debt_to_equity", False),
            "min_pat_cagr_5yr": ("pat_cagr_5yr", True), "max_pe": ("pe_ratio", False)}
 
 @router.get("/screener")
-def screen(request: Request, min_roe: float | None = None, max_de: float | None = None,
-           min_fcf: float | None = None, sector: str | None = None,
-           min_rev_cagr_5yr: float | None = None, min_pat_cagr_5yr: float | None = None,
-           max_pe: float | None = None, db: sqlite3.Connection = Depends(get_connection)):
-    params = locals()
+def screen(request: Request, min_roe: str | None = None, max_de: str | None = None,
+           min_fcf: str | None = None, sector: str | None = None,
+           min_rev_cagr_5yr: str | None = None, min_pat_cagr_5yr: str | None = None,
+           max_pe: str | None = None, db: sqlite3.Connection = Depends(get_connection)):
+    params = locals().copy()
     for key in request.query_params:
         if key not in (*FILTERS, "sector"):
             raise HTTPException(400, f"Unknown filter: {key}")
@@ -27,6 +27,7 @@ def screen(request: Request, min_roe: float | None = None, max_de: float | None 
             except ValueError: raise HTTPException(400, f"Invalid {key}")
             if not math.isfinite(val) or (key in ("max_de", "max_pe") and val < 0):
                 raise HTTPException(400, f"Invalid {key}")
+            params[key] = val
     rows = metrics(db)
     out = []
     for row in rows:
