@@ -36,6 +36,10 @@ def normalize_year(value: object) -> int | None:
     if not text:
         return None
 
+    match = re.fullmatch(r"FY\\s*(\\d{2})", text)
+    if match:
+        return 2000 + int(match.group(1))
+
     match = re.fullmatch(r"FY\s*(19\d{2}|20\d{2}|21\d{2})", text)
     if match:
         return int(match.group(1))
