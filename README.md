@@ -948,3 +948,23 @@ pytest tests/api/test_day38_scaffold.py -v
 ```
 
 **Day 38 status:** Scaffold, dependencies, tests, and documentation committed. Local Uvicorn startup and browser/OpenAPI verification still need to be run in an environment with dependencies installed. Wildcard CORS must be restricted before any public deployment.
+
+
+### Day 39 — Company Data API
+
+Implemented seven routes in `src/api/routers/companies.py` (all under `/api/v1`):
+
+- `GET /companies` — directory with sector, sub-sector, ROE, ROCE where sourced, and market cap; optional `sector`, `market_cap_category`, `search` filters. Market-cap categories use INR crore thresholds: Large >=20,000; Mid >=5,000; Small below 5,000.
+- `GET /companies/{ticker}` — full company fields, sector and latest financial statement/ratio records; unknown ticker returns 404.
+- `GET /companies/{ticker}/pl`, `/bs`, `/cashflow` — ascending annual histories, optional `from_year` and `to_year` formatted `YYYY-MM`. Since the normalized database stores integer annual years, filtering operates at calendar-year granularity, not monthly granularity.
+- `GET /companies/{ticker}/ratios` — all computed yearly KPI records, or a single record with `?year=2024` (null if that year has no record).
+- `GET /companies/{ticker}/tearsheet` — pre-generated PDF download with `application/pdf`; returns 404 when absent.
+
+ROCE is returned only when a source field is available; the normalized financial-ratios schema does not currently define ROCE. A missing value is not fabricated.
+
+```bash
+uvicorn src.api.main:app --port 8000
+pytest tests/api/test_day39_companies.py -v
+```
+
+**Status:** Routes and isolated SQLite contract tests committed. Production 92-company responses, real PDF downloads and live Swagger checks remain pending.
