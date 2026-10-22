@@ -55,3 +55,11 @@ def test_discover_workbooks_returns_sorted_excel_files(tmp_path):
         (tmp_path / name).write_text("x", encoding="utf-8")
     paths = discover_workbooks(tmp_path)
     assert [p.name for p in paths] == ["a.xlsx", "z.xlsx"]
+
+@pytest.mark.parametrize("filename", ["companies.xlsx", "balancesheet.xlsx", "cashflow.xlsx", "sectors.xlsx", "market_cap.xlsx"])
+def test_source_file_row_count_and_columns(tmp_path, filename):
+    path = tmp_path / filename
+    _write_bluestock_workbook(path)
+    result = load_excel(path)
+    assert len(result) == 2
+    assert list(result.columns) == ["id", "company_id", "year"]
