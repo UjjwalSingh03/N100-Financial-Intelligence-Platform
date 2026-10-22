@@ -885,3 +885,27 @@ python -m scripts.day35_portfolio_review --audit-only
 ```
 
 **Sprint 5 acceptance status:** Source code and review documentation for Days 29–35 are committed. Generated outputs must be produced and checked against the current production database; five tearsheets still require manual visual review. Team-lead demonstration and sign-off have not yet been confirmed. Do not treat the Sprint 5 Definition of Done as passed until the audit, visual review, and sign-off are complete.
+
+
+## Sprint 6 — API Server, Clustering & Final QA
+
+Sprint 6 targets Days 36–45 (89 SP): five-cluster company archetypes, 16 FastAPI endpoints, 60+ passing tests, 20 acceptance gates, and team-lead sign-off. These are targets, not verified results.
+
+### Day 36 — KMeans Clustering
+
+Implemented `src/analytics/clustering.py` and `tests/analytics/test_clustering.py`.
+
+- Latest company-level features: ROE, D/E, 5-year Revenue CAGR, 5-year FCF CAGR, and OPM.
+- Uses the ratio table where available, with P&L OPM and historical cash-flow-derived FCF CAGR fallbacks.
+- Missing values are imputed using the median for each sector and metric; a global median is used only if that sector has no observed value. An entirely missing feature raises an error.
+- StandardScaler standardizes the five inputs; KMeans uses `n_clusters=5`, `random_state=42`, and `n_init=10`.
+- Assigns deterministic, distinct descriptive archetype names by ranking centroid scores; these heuristic names require business review.
+- Generates `output/cluster_labels.csv` with `company_id, cluster_id, cluster_name, distance_from_centroid`.
+- Saves inertia for k=2–10 as `reports/elbow_plot.png`, marking k=5. Whether k=5 is near the elbow requires inspection; it is not claimed automatically.
+
+```bash
+python -m src.analytics.clustering --db db/nifty100.db
+pytest tests/analytics/test_clustering.py -v
+```
+
+**Day 36 status:** Implementation and tests committed. Production execution, confirmation of 92 assignments, and elbow-plot review remain pending.
