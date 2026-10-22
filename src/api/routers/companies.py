@@ -77,7 +77,7 @@ def summary(db, base):
     amount, category = market_cap_info(db, cid)
     return {"id": cid, "company_name": base["company_name"], **sec,
             "roe_pct": ratios.get("return_on_equity_pct"),
-            "roce_pct": ratios.get("roce_percentage"),
+            "roce_pct": ratios.get("roce_percentage", base.get("roce_percentage")),
             "market_cap_category": category, "market_cap_cr": amount}
 
 
