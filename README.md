@@ -827,3 +827,61 @@ python -m src.analytics.cashflow_kpis --db db/nifty100.db --output-dir output
 ```
 
 **Validation:** the automated integration tests and full production output generation must be run against the actual database before recording final 92-company counts or claiming the production workbook passed.
+
+
+### Day 32 — Capital Allocation Report
+
+- Added `scripts/day32_capital_allocation_report.py` to audit the Sprint 2 `capital_allocation.csv` for missing/blank company-year keys, duplicates, invalid labels, and 92-company coverage.
+- Produces `output/capital_allocation_audit.csv`, latest-year `output/pattern_distribution.csv` (all eight patterns), and year-over-year `output/pattern_changes.csv`.
+- Synchronizes `capital_allocation_label` in the Day 31 `output/cashflow_intelligence.xlsx` workbook.
+- Existing source audit identified duplicate records and blank-year rows. The optional `--repair` mode removes only blank-key rows and identical duplicates; conflicting source records require manual resolution.
+
+```bash
+python scripts/day32_capital_allocation_report.py --repair
+```
+
+**Status:** Implementation committed; production execution and output verification pending.
+
+### Day 33 — Two-Page PDF Tearsheet Template
+
+- Added `src/reports/tearsheet.py` using ReportLab.
+- Page 1: navy company header, six KPI tiles, up to ten years of Revenue and Net Profit bars, and ROE/ROCE trends.
+- Page 2: Balance Sheet stacked composition chart and wrapped annual table, latest-year cash-flow waterfall, Pros and Cons, and Capital Allocation badge.
+- Added five-company smoke tests in `tests/reports/test_tearsheet.py` for TCS, HDFCBANK, RELIANCE, SUNPHARMA, and TATASTEEL; updated PDF dependencies in `requirements.txt`.
+
+```bash
+pytest tests/reports/test_tearsheet.py -v
+python -m src.reports.tearsheet --db db/nifty100.db --ticker TCS
+```
+
+**Status:** Template committed; final rendering and manual overflow review pending.
+
+### Day 34 — Batch Company and Sector Reports
+
+- Added `scripts/day34_batch_reports.py` to generate `reports/tearsheets/<ticker>_tearsheet.pdf` for eligible companies.
+- Skips companies with fewer than three distinct P&L years and logs them to `output/skipped_tearsheets.csv`; logs generation errors separately in `output/failed_tearsheets.csv`.
+- Generates `reports/sector/<sector>_report.pdf` with a sector median-KPI summary page and a company comparison table with eight metrics.
+- Added `src/reports/sector_report.py` as a sector-report entry point.
+
+```bash
+python -m scripts.day34_batch_reports --db db/nifty100.db
+ls reports/tearsheets/ | wc -l
+ls reports/sector/ | wc -l
+```
+
+**Status:** Generator committed. Actual PDF counts, chart rendering, and five-PDF visual checks remain pending.
+
+### Day 35 — Portfolio Summary PDF and Sprint 5 Review
+
+- Added `scripts/day35_portfolio_review.py` to generate `reports/portfolio/portfolio_summary.pdf`: one page per company, alphabetically ordered by ticker.
+- Each page includes company name, sector, six KPIs, and year-over-year trend indicators: UP (improved), DOWN (declined), FLAT (within 2%), or N/A (insufficient history). Text labels avoid unsupported arrow glyphs in standard PDF fonts.
+- Added `output/sprint5_exit_audit.csv` checks for Pros/Cons coverage, parsed analysis output, cash-flow workbook structure, distress alerts, tearsheet count/two-page format/minimum 30 KB, sector count, and portfolio page count.
+- Documented the retrospective, three-tearsheet demo, workbook/CSV walkthrough, and team-lead approval checklist in `docs/day35_sprint5_review.md`.
+
+```bash
+python -m scripts.day35_portfolio_review
+# Re-run checks without regenerating the portfolio:
+python -m scripts.day35_portfolio_review --audit-only
+```
+
+**Sprint 5 acceptance status:** Source code and review documentation for Days 29–35 are committed. Generated outputs must be produced and checked against the current production database; five tearsheets still require manual visual review. Team-lead demonstration and sign-off have not yet been confirmed. Do not treat the Sprint 5 Definition of Done as passed until the audit, visual review, and sign-off are complete.
