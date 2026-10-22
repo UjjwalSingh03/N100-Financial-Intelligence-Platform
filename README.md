@@ -993,3 +993,16 @@ uvicorn src.api.main:app --port 8000
 The exporter writes `docs/openapi.json` and `docs/postman_collection.json`. The generated artifacts must be reviewed and committed after running the exporter locally.
 
 **Day 40 status:** Route implementation, export script, tests, and documentation committed. Actual production response counts, 11-sector coverage, 10 peer percentile metrics, and live Swagger/Postman checks remain pending.
+
+
+### Day 41 — ETL & KPI Unit Tests
+
+Added the requested test modules: `tests/etl/test_normalise.py` (20 parameterized year-normalization cases), extended existing `tests/etl/test_loader.py` to 10 cases, `tests/kpi/test_ratios.py` (20 KPI cases), and `tests/dq/test_rules.py` (14 targeted DQ-01–DQ-14 cases). Also updated `normalize_year()` to recognize two-digit `FY24` and `FY 24` formats.
+
+The KPI tests cover positive/negative-equity ROE, debt-free D/E, zero-interest ICR, non-Financials leverage flags, normal and sign-changing CAGR, OPM mismatch logging, and CFO quality. The DQ tests assert rule IDs and severities; DQ-09 negative dividend payout also satisfies DQ-10's out-of-range condition by the validator's existing definitions, so those two findings are not mutually exclusive.
+
+```bash
+pytest tests/etl/ tests/kpi/ tests/dq/ -v
+```
+
+**Status:** Tests and normalizer change committed. The complete command has not yet been executed in a local checkout with installed dependencies; passing results and zero failures must be confirmed from an actual pytest run.
