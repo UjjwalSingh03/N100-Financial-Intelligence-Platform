@@ -69,7 +69,22 @@ def run(db="db/nifty100.db", labels_path="output/cluster_labels.csv",
     members=frame.groupby("cluster_id")["company_id"].apply(lambda x:", ".join(sorted(x))).reset_index(name="members")
     members.to_csv(output_dir/"cluster_members.csv",index=False)
     # Suggested names are provisional; team lead must review actual member lists.
-    suggested=dict(zip(sorted(frame.cluster_id.unique().astype(int)),NAMES))
+    means=filled.groupby("cluster_id")[list(FEATURES)].mean()
+    normalized=(means-means.mean())/means.std(ddof=0).replace(0,1)
+    quality=normalized["return_on_equity_pct"]+normalized["operating_profit_margin_pct"]-normalized["debt_to_equity"]
+    growth=normalized["revenue_cagr_5yr"]+normalized["fcf_cagr_5yr"]
+    remaining=set(int(k) for k in means.index)
+    suggested={}
+    def assign(name,scores,highest=True):
+        available=scores.loc[sorted(remaining)]
+        choice=int(available.idxmax() if highest else available.idxmin())
+        suggested[choice]=name
+        remaining.remove(choice)
+    assign("High-Quality Compounders",quality)
+    assign("Emerging Growth",growth)
+    assign("Distressed or Turnaround",quality+growth,False)
+    assign("Value Cyclicals",normalized["debt_to_equity"])
+    assign("Defensive Dividend Payers",quality) # provisional; dividend yield is not an input
     pd.DataFrame([{"cluster_id":k,"suggested_name":v,"review_status":"PENDING TEAM LEAD REVIEW"}
                   for k,v in suggested.items()]).to_csv(output_dir/"cluster_name_review.csv",index=False)
     # Pearson pairwise-complete observations; missing values are not silently imputed for correlation.
