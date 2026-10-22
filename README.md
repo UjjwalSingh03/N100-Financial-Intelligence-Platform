@@ -968,3 +968,28 @@ pytest tests/api/test_day39_companies.py -v
 ```
 
 **Status:** Routes and isolated SQLite contract tests committed. Production 92-company responses, real PDF downloads and live Swagger checks remain pending.
+
+
+### Day 40 — Screener, Sector, Peer and Remaining API Routes
+
+Implemented eight additional routes in the existing `/api/v1` routers:
+
+- `GET /screener`: `min_roe`, `max_de`, `min_fcf`, `sector`, `min_rev_cagr_5yr`, `min_pat_cagr_5yr`, `max_pe`; ranked by latest composite score. Invalid numeric/unknown filters return HTTP 400; missing values do not pass active thresholds.
+- `GET /sectors`: company counts and median ROE, P/E and D/E; `GET /sectors/{sector}/companies`: latest KPI records, 404 for unknown sectors.
+- `GET /peers/{group_name}`: peer members with latest available per-company percentile values for each available metric; 404 for unknown group. Requires Day 18 `peer_percentiles` output.
+- `GET /companies/{ticker}/peers/compare`: eight-axis company, peer-average and benchmark values; optional `benchmark` ticker.
+- `GET /market-cap/{ticker}`: available annual 2019–2024 valuation multiples. P/E is derived from market cap / positive net profit when no source multiple exists; P/B, EV/EBITDA and dividend yield remain null unless sourced.
+- `GET /portfolio/stats`: ten-KPI P10/P25/P50/P75/P90 statistics from Day 37 `output/portfolio_stats.csv`; returns 503 if missing or malformed.
+- `GET /companies/{ticker}/documents`: annual document links with `is_url_valid` indicating **URL syntax validity only**, plus `url_validation_method=syntax_only`; this is not a live HTTP availability guarantee.
+
+Export the actual application schema and Postman collection after installing requirements:
+
+```bash
+python -m scripts.day40_export_api
+pytest tests/api/test_day40_endpoints.py -v
+uvicorn src.api.main:app --port 8000
+```
+
+The exporter writes `docs/openapi.json` and `docs/postman_collection.json`. The generated artifacts must be reviewed and committed after running the exporter locally.
+
+**Day 40 status:** Route implementation, export script, tests, and documentation committed. Actual production response counts, 11-sector coverage, 10 peer percentile metrics, and live Swagger/Postman checks remain pending.
