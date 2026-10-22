@@ -909,3 +909,23 @@ pytest tests/analytics/test_clustering.py -v
 ```
 
 **Day 36 status:** Implementation and tests committed. Production execution, confirmation of 92 assignments, and elbow-plot review remain pending.
+
+
+### Day 37 — Cluster Profiling & Statistics
+
+Implemented `src/analytics/cluster_profiling.py` for post-clustering interpretation and portfolio-wide statistics.
+
+- Profiles each of the five Day 36 clusters using mean and median values for all five clustering inputs, with observed counts and imputed means saved to `output/cluster_profiles.csv`.
+- Saves actual cluster membership to `output/cluster_members.csv` so proposed archetype names can be reviewed against the companies in each cluster.
+- Produces provisional descriptive names — High-Quality Compounders, Emerging Growth, Distressed or Turnaround, Value Cyclicals, and Defensive Dividend Payers — in `output/cluster_name_review.csv`. These names are explicitly marked pending team-lead review and should be adjusted after inspecting actual membership.
+- Computes a 10-KPI latest-year Pearson correlation matrix and saves `output/correlation_matrix.csv` plus an annotated seaborn heatmap at `reports/correlation_heatmap.png`.
+- Computes population Z-scores within each broad sector and writes every company/metric observation with `|Z| > 3` to `output/outlier_report.csv`.
+- Generates `output/portfolio_stats.csv` containing P10, P25, P50, P75, P90, Mean, Std, and observed count for each of the ten KPIs.
+
+```bash
+# Day 36 labels must exist first
+python -m src.analytics.clustering --db db/nifty100.db
+python -m src.analytics.cluster_profiling --db db/nifty100.db
+```
+
+**Day 37 status:** Implementation is committed. Production statistics, heatmap inspection, actual outlier counts, cluster membership review, final cluster-name adjustments, and team-lead approval remain pending.
