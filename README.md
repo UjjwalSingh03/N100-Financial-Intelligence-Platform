@@ -1,5 +1,40 @@
 # N100 Financial Intelligence Platform
 
+## Project overview and quick start
+
+N100 combines 12 Excel inputs, a normalized SQLite database, financial KPI calculations, a Streamlit analyst dashboard, PDF reports, and a read-only FastAPI service. Outputs require the source files and a successful ETL run; generated results should be verified before external use.
+
+```bash
+python -m venv .venv
+# Activate .venv (Windows PowerShell: .\\.venv\\Scripts\\Activate.ps1)
+pip install -r requirements.txt
+# Place the 12 source Excel files in data/raw/
+python -m src.etl.database_loader
+python scripts/populate_financial_ratios.py --db db/nifty100.db
+```
+
+Start the dashboard and API in separate terminals:
+
+```bash
+streamlit run src/dashboard/app.py --server.port 8501
+uvicorn src.api.main:app --port 8000
+```
+
+Open http://127.0.0.1:8501 for the dashboard, http://127.0.0.1:8000/docs for Swagger and http://127.0.0.1:8000/api/v1/health for database status. Set `N100_DB_PATH` if the SQLite file is stored elsewhere. To use API-backed screener mode, set `N100_SCREENER_SOURCE=api` and `N100_API_URL=http://127.0.0.1:8000` before starting Streamlit.
+
+Tests and quality:
+
+```bash
+pytest tests/ -v --html=reports/pytest_report.html --self-contained-html
+black src/ tests/
+ruff check src/ tests/
+python -m scripts.day43_performance
+python -m scripts.day44_docs_audit
+```
+
+The analyst guide is `docs/analyst_guide.pdf` once copied into the repository. The Day 44 audit checks public docstrings and archives an explicit 23-item deliverable manifest. Missing generated outputs are reported, not replaced with placeholders. The PDF guide and HTML report are binary/generated artifacts and must be copied/committed after local generation.
+
+
 A financial intelligence platform for Nifty 100 companies, covering data ingestion, validation, SQLite analytics, financial ratios, and reporting.
 
 ## Sprint 1 — Data Foundation
