@@ -45,3 +45,6 @@ httpx>=0.27,<1  # FastAPI TestClient
 
 # Day 42 HTML test report
 pytest-html>=4.1,<5
+
+# Day 44 code formatting
+black>=24.8,<27
