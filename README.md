@@ -1006,3 +1006,26 @@ pytest tests/etl/ tests/kpi/ tests/dq/ -v
 ```
 
 **Status:** Tests and normalizer change committed. The complete command has not yet been executed in a local checkout with installed dependencies; passing results and zero failures must be confirmed from an actual pytest run.
+
+
+### Day 42 — API Tests & Integration
+
+Added production-data API contract tests: `tests/api/test_health.py`, `test_companies.py`, `test_screener.py`, `test_sectors.py`, and `test_dashboard_integration.py`. Shared `tests/api/conftest.py` requires an existing SQLite database with exactly 92 companies; it fails clearly rather than reporting false success when production data is unavailable.
+
+- Health checks all ten core row-count keys and status 200.
+- Company tests require 92 distinct companies, a TCS profile and invalid-ticker 404.
+- Screener tests check ROE >=15 for every result and HTTP 400 on invalid filters.
+- Sector tests require exactly 11 sectors, total membership 92, IT-only membership and unknown-sector 404.
+- Added `src/dashboard/utils/api.py` and optional API mode in the Streamlit screener. The integration test forwards dashboard adapter requests to FastAPI's TestClient and compares company ID sets using identical selected filters. The legacy SQLite dashboard mode remains available.
+
+```bash
+pip install -r requirements.txt
+# Set N100_DB_PATH to your loaded 92-company database if not using db/nifty100.db
+pytest tests/ --html=reports/pytest_report.html --self-contained-html -v
+# API mode, in separate terminals:
+uvicorn src.api.main:app --port 8000
+# Linux/macOS: N100_SCREENER_SOURCE=api streamlit run src/dashboard/app.py
+# Windows PowerShell: $env:N100_SCREENER_SOURCE="api"; streamlit run src/dashboard/app.py
+```
+
+**Day 42 status:** Test implementation, `pytest-html` dependency, dashboard API adapter and integration assertions committed. A real test run and generated HTML report have **not** been verified in this environment. The acceptance gate is >=60 collected tests with zero failures, confirmed only after executing the command against the production database.
