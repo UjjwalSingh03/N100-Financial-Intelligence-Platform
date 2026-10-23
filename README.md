@@ -1078,3 +1078,17 @@ python -m scripts.day43_performance
 Performance targets: all ten requests finish within ten seconds total, and each of five profile data loads finishes in under three seconds. Streamlit's server health is an automated readiness check; visually verifying page rendering and displayed data remains a manual integration gate. Day 43 adds nonduplicate indexes for company-scoped lookup tables to `db/schema.sql`. Apply new indexes explicitly to an existing production SQLite database before benchmarking their effect.
 
 **Day 43 status:** Benchmark script, schema index definitions, and initial performance notes committed; actual timings and end-to-end browser checks are pending local execution.
+
+
+### Day 45 — Final acceptance and sign-off
+
+Added `scripts/day45_acceptance.py`, a conservative evaluator of AC-01 through AC-20 that writes `output/day45_gate_results.json`. Run against the **current** normalized database (`db/nifty100.db` or `N100_DB_PATH`), not an earlier differently structured snapshot. Unverified manual gates default to FAIL; only set `output/day45_manual_evidence.json` keys to true after obtaining actual supporting evidence. The reviewer must inspect `docs/acceptance_checklist.pdf`, confirm all 23 archive entries and separately listed Day 45 handoff outputs, then sign and date it personally. No automatic team-lead signature is generated.
+
+```bash
+python -m scripts.day40_export_api
+pytest tests/ -v --html=reports/pytest_report.html --self-contained-html
+python -m scripts.day45_acceptance
+python -m scripts.day44_docs_audit
+```
+
+**Status:** Acceptance automation and unsigned checklist prepared. Historical Day 21 database snapshots are not proof of current production gates; final approval is pending.
