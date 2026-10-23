@@ -175,3 +175,11 @@ CREATE TABLE IF NOT EXISTS peer_percentiles (
 CREATE INDEX IF NOT EXISTS idx_peer_percentiles_group_metric ON peer_percentiles(peer_group_name, metric, year);
 
 PRAGMA foreign_keys = ON;
+
+-- Day 43: cover company-scoped lookup tables not indexed by earlier composite indexes.
+CREATE INDEX IF NOT EXISTS idx_analysis_company_year ON analysis(company_id, metric_year);
+CREATE INDEX IF NOT EXISTS idx_documents_company_date ON documents(company_id, document_date);
+CREATE INDEX IF NOT EXISTS idx_prosandcons_company ON prosandcons(company_id);
+CREATE INDEX IF NOT EXISTS idx_sectors_company ON sectors(company_id);
+CREATE INDEX IF NOT EXISTS idx_peer_groups_company ON peer_groups(company_id);
+CREATE INDEX IF NOT EXISTS idx_peer_percentiles_company_year ON peer_percentiles(company_id, year);
