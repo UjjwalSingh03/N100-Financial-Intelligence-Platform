@@ -1029,3 +1029,17 @@ uvicorn src.api.main:app --port 8000
 ```
 
 **Day 42 status:** Test implementation, `pytest-html` dependency, dashboard API adapter and integration assertions committed. A real test run and generated HTML report have **not** been verified in this environment. The acceptance gate is >=60 collected tests with zero failures, confirmed only after executing the command against the production database.
+
+
+### Day 43 — Performance & Integration Testing
+
+Added `scripts/day43_performance.py`, a local benchmark that starts FastAPI on port 8000 and Streamlit on port 8501, waits for both health checks, verifies the API reports 92 companies, issues ten simultaneous screener requests using a Python thread pool, times cold Company Profile data-helper loads for TCS, INFY, HDFCBANK, RELIANCE and SUNPHARMA, and records SQLite query plans and results in `output/perf_notes.md`. The script stops only the processes it starts. Existing port occupants cause a clear error.
+
+```bash
+pip install -r requirements.txt
+python -m scripts.day43_performance
+```
+
+Performance targets: all ten requests finish within ten seconds total, and each of five profile data loads finishes in under three seconds. Streamlit's server health is an automated readiness check; visually verifying page rendering and displayed data remains a manual integration gate. Day 43 adds nonduplicate indexes for company-scoped lookup tables to `db/schema.sql`. Apply new indexes explicitly to an existing production SQLite database before benchmarking their effect.
+
+**Day 43 status:** Benchmark script, schema index definitions, and initial performance notes committed; actual timings and end-to-end browser checks are pending local execution.
