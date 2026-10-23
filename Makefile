@@ -13,10 +13,10 @@ report:
 	python -m src.etl.report
 
 dashboard:
-	python -m src.dashboard.app
+	streamlit run src/dashboard/app.py
 
 api:
-	python -m src.api.app
+	uvicorn src.api.main:app --port 8000
 
 clean:
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
