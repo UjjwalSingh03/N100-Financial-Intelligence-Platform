@@ -1,6 +1,8 @@
 """Sprint 4 Day 24 — interactive screener."""
 from __future__ import annotations
+import os
 import streamlit as st
+from src.dashboard.utils.api import api_screener
 from src.dashboard.utils.db import get_screener_data
 from src.screener.engine import apply_filters
 
@@ -21,6 +23,27 @@ def _apply_preset(name):
 
 def render():
     st.title("Financial Screener")
+    if os.getenv("N100_SCREENER_SOURCE", "sqlite").lower() == "api":
+        st.caption("API mode: latest-year data and supported API filters.")
+        selected = {}
+        for key, label, default in (
+            ("roe_min", "Minimum ROE", 0.0), ("de_max", "Maximum D/E", 20.0),
+            ("fcf_min", "Minimum FCF", -10000.0),
+            ("revenue_cagr_5yr_min", "Minimum revenue CAGR", -100.0),
+            ("pat_cagr_5yr_min", "Minimum PAT CAGR", -100.0),
+            ("pe_max", "Maximum P/E", 200.0)):
+            if st.sidebar.checkbox("Enable " + label, key="api_enable_" + key):
+                selected[key] = st.sidebar.number_input(label, value=default, key="api_" + key)
+        try:
+            result = api_screener(selected)
+        except Exception as exc:
+            st.error(f"API screener unavailable: {exc}")
+            return
+        st.markdown(f"### {len(result)} companies match your API filters")
+        st.dataframe(result, use_container_width=True, hide_index=True)
+        st.download_button("Download CSV", result.to_csv(index=False).encode("utf-8"),
+                           file_name="api_screener.csv", mime="text/csv")
+        return
     year = int(st.session_state.get("dashboard_year", 2024))
     data = get_screener_data(year)
     if data.empty:
