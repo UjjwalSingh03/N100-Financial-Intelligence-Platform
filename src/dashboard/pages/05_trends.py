@@ -1,5 +1,6 @@
 """Sprint 4 Day 25 — trend analysis."""
 from __future__ import annotations
+import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from src.dashboard.utils.db import get_companies, get_trend_data
@@ -31,7 +32,20 @@ def render():
     if not metrics:
         st.info("Select at least one metric.")
         return
-    metric_keys={"ROE":"roe","ROCE":"roce","Revenue":"revenue","Net Profit":"net_profit","EPS":"eps"}\n    data=get_trend_data(ticker,tuple(metric_keys.get(m,m.lower()) for m in metrics))
+    metric_keys = {
+        "ROE": "roe",
+        "ROCE": "roce",
+        "Net Profit Margin": "net_profit_margin",
+        "Operating Profit Margin": "operating_profit_margin",
+        "D/E": "de",
+        "FCF": "fcf",
+        "Revenue CAGR 5yr": "revenue_cagr_5yr",
+        "PAT CAGR 5yr": "pat_cagr_5yr",
+        "EPS CAGR 5yr": "eps_cagr_5yr",
+        "Composite Score": "composite_score",
+    }
+    requested_metrics = tuple(metric_keys[m] for m in metrics)
+    data = get_trend_data(ticker, requested_metrics)
     if data.empty:
         st.info("No trend history available.")
         return
@@ -40,9 +54,10 @@ def render():
         st.info(f"Data available for {available_years} years; fewer than 10 years are available.")
     fig=go.Figure()
     for metric in metrics:
-        y=data[metric]
-        yoy=y.pct_change().mul(100)
-        yoy_text=[f"{v:+.1f}%" if v==v else "—" for v in yoy]
+        column = metric_keys[metric]
+        y = data[column]
+        yoy = y.pct_change().mul(100)
+        yoy_text = [f"{v:+.1f}%" if v == v else "—" for v in yoy]
         fig.add_trace(go.Scatter(
             x=data["year"], y=y, mode="lines+markers+text", name=metric,
             text=yoy_text, textposition="top center",

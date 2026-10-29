@@ -1,0 +1,453 @@
+{
+  "info": {
+    "name": "N100 Financial Intelligence API",
+    "description": "Generated from the FastAPI OpenAPI specification.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "List Companies",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/companies",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "companies"
+          ],
+          "query": [
+            {
+              "key": "sector",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "market_cap_category",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "search",
+              "value": "",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Company",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/companies/:ticker",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "companies",
+            ":ticker"
+          ],
+          "query": []
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Profit Loss",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/companies/:ticker/pl",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "companies",
+            ":ticker",
+            "pl"
+          ],
+          "query": [
+            {
+              "key": "from_year",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "to_year",
+              "value": "",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Balance Sheet",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/companies/:ticker/bs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "companies",
+            ":ticker",
+            "bs"
+          ],
+          "query": [
+            {
+              "key": "from_year",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "to_year",
+              "value": "",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Cash Flow",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/companies/:ticker/cashflow",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "companies",
+            ":ticker",
+            "cashflow"
+          ],
+          "query": [
+            {
+              "key": "from_year",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "to_year",
+              "value": "",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Ratios",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/companies/:ticker/ratios",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "companies",
+            ":ticker",
+            "ratios"
+          ],
+          "query": [
+            {
+              "key": "year",
+              "value": "",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Tearsheet",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/companies/:ticker/tearsheet",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "companies",
+            ":ticker",
+            "tearsheet"
+          ],
+          "query": []
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Screen",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/screener",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "screener"
+          ],
+          "query": [
+            {
+              "key": "min_roe",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "max_de",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "min_fcf",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "sector",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "min_rev_cagr_5yr",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "min_pat_cagr_5yr",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "max_pe",
+              "value": "",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Sectors",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/sectors",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "sectors"
+          ],
+          "query": []
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Sector Companies",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/sectors/:sector/companies",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "sectors",
+            ":sector",
+            "companies"
+          ],
+          "query": []
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Peer Group",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/peers/:group_name",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "peers",
+            ":group_name"
+          ],
+          "query": []
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Compare",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/companies/:ticker/peers/compare",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "companies",
+            ":ticker",
+            "peers",
+            "compare"
+          ],
+          "query": [
+            {
+              "key": "benchmark",
+              "value": "",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Market Cap",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/market-cap/:ticker",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "market-cap",
+            ":ticker"
+          ],
+          "query": []
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Portfolio Stats",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/portfolio/stats",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "portfolio",
+            "stats"
+          ],
+          "query": []
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Documents",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/companies/:ticker/documents",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "companies",
+            ":ticker",
+            "documents"
+          ],
+          "query": []
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "health"
+          ],
+          "query": []
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000"
+    }
+  ]
+}

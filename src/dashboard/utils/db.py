@@ -138,7 +138,8 @@ def get_screener_data(year: int, db_path: str = str(DEFAULT_DB_PATH)) -> pd.Data
     SELECT DISTINCT c.id AS company_id, c.company_name, c.ticker, c.sector, r.year,
            r.return_on_equity_pct AS roe, r.debt_to_equity AS de, r.free_cash_flow_cr AS fcf,
            r.revenue_cagr_5yr, r.pat_cagr_5yr, r.operating_profit_margin_pct AS opm,
-           r.interest_coverage AS icr, r.composite_quality_score AS composite_score,
+           r.interest_coverage AS icr, r.composite_quality_score,
+           r.composite_quality_score AS composite_score,
            {pe_expr} AS pe_ratio, {pb_expr} AS pb_ratio, {dy_expr} AS dividend_yield
     FROM companies c
     LEFT JOIN financial_ratios r ON r.company_id=c.id AND r.year=?
@@ -172,7 +173,31 @@ def get_peer_radar(group_name: str, ticker: str, year: int, db_path: str = str(D
     return _query(sql, (group_name, ticker, year, group_name, year), db_path)
 
 
-@st.cache_data(ttl=600)\ndef get_trend_data(ticker: str, metrics: Iterable[str], db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:\n    """Return normalized annual trend metrics for a company."""\n    aliases = {\n        "roe": "r.return_on_equity_pct AS roe",\n        "roce": "CASE WHEN (COALESCE(bs.equity_capital,0) + COALESCE(bs.reserves,0) + COALESCE(bs.borrowings,0)) <> 0 THEN COALESCE(pl.operating_profit,0) / (COALESCE(bs.equity_capital,0) + COALESCE(bs.reserves,0) + COALESCE(bs.borrowings,0)) * 100.0 ELSE NULL END AS roce",\n        "net_profit_margin": "r.net_profit_margin_pct AS net_profit_margin",\n        "operating_profit_margin": "r.operating_profit_margin_pct AS operating_profit_margin",\n        "de": "r.debt_to_equity AS de",\n        "fcf": "r.free_cash_flow_cr AS fcf",\n        "revenue_cagr_5yr": "r.revenue_cagr_5yr AS revenue_cagr_5yr",\n        "pat_cagr_5yr": "r.pat_cagr_5yr AS pat_cagr_5yr",\n        "eps_cagr_5yr": "r.eps_cagr_5yr AS eps_cagr_5yr",\n        "composite_score": "r.composite_quality_score AS composite_score",\n    }\n    requested = [str(m).lower() for m in metrics if str(m).lower() in aliases]\n    if not requested:\n        return pd.DataFrame()\n    requested = list(dict.fromkeys(requested))\n    select = ["pl.year"] + [aliases[m] for m in requested]\n    sql = f"SELECT DISTINCT {\", \".join(select)} FROM profitandloss pl LEFT JOIN financial_ratios r ON r.company_id=pl.company_id AND r.year=pl.year LEFT JOIN balancesheet bs ON bs.company_id=pl.company_id AND bs.year=pl.year WHERE pl.company_id=? ORDER BY pl.year"\n    return _query(sql, (ticker,), db_path)\n\n\n@st.cache_data(ttl=600)
+@st.cache_data(ttl=600)
+def get_trend_data(ticker: str, metrics: Iterable[str], db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
+    """Return normalized annual trend metrics for a company."""
+    aliases = {
+        "roe": "r.return_on_equity_pct AS roe",
+        "roce": "CASE WHEN (COALESCE(bs.equity_capital,0) + COALESCE(bs.reserves,0) + COALESCE(bs.borrowings,0)) <> 0 THEN COALESCE(pl.operating_profit,0) / (COALESCE(bs.equity_capital,0) + COALESCE(bs.reserves,0) + COALESCE(bs.borrowings,0)) * 100.0 ELSE NULL END AS roce",
+        "net_profit_margin": "r.net_profit_margin_pct AS net_profit_margin",
+        "operating_profit_margin": "r.operating_profit_margin_pct AS operating_profit_margin",
+        "de": "r.debt_to_equity AS de",
+        "fcf": "r.free_cash_flow_cr AS fcf",
+        "revenue_cagr_5yr": "r.revenue_cagr_5yr AS revenue_cagr_5yr",
+        "pat_cagr_5yr": "r.pat_cagr_5yr AS pat_cagr_5yr",
+        "eps_cagr_5yr": "r.eps_cagr_5yr AS eps_cagr_5yr",
+        "composite_score": "r.composite_quality_score AS composite_score",
+    }
+    requested = [str(m).lower() for m in metrics if str(m).lower() in aliases]
+    if not requested:
+        return pd.DataFrame()
+    requested = list(dict.fromkeys(requested))
+    select = ["pl.year"] + [aliases[m] for m in requested]
+    sql = f"SELECT DISTINCT {', '.join(select)} FROM profitandloss pl LEFT JOIN financial_ratios r ON r.company_id=pl.company_id AND r.year=pl.year LEFT JOIN balancesheet bs ON bs.company_id=pl.company_id AND bs.year=pl.year WHERE pl.company_id=? ORDER BY pl.year"
+    return _query(sql, (ticker,), db_path)
+
+
+@st.cache_data(ttl=600)
 def get_sector_analysis(sector: str, year: int, db_path: str = str(DEFAULT_DB_PATH)) -> pd.DataFrame:
     sql = """
     SELECT c.id AS company_id, c.company_name, c.ticker, c.sector, r.return_on_equity_pct AS roe,
