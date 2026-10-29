@@ -239,6 +239,8 @@ def apply_preset(
     """Apply a named YAML preset, optionally overridden by custom thresholds."""
     config = load_config(config_path)
     presets = config.get("presets", {})
+    preset_aliases = {"quality": "quality_compounder"}
+    preset = preset_aliases.get(preset.casefold(), preset)
     if preset not in presets:
         available = ", ".join(sorted(presets))
         raise KeyError(f"Unknown preset '{preset}'. Available presets: {available}")

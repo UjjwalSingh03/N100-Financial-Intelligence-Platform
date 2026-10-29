@@ -28,6 +28,9 @@ def test_rule_violation(rule,table,changes,severity):
     tables={"companies":pd.DataFrame(BASE_COMPANIES),"profitandloss":pd.DataFrame(BASE_PL),
             "balancesheet":pd.DataFrame(BASE_BS),"stock_prices":pd.DataFrame(BASE_PRICES)}
     frame=tables[table].copy()
+    required_rows=max([len(value) for value in changes.values()] + [len(frame)])
+    if required_rows > len(frame):
+        frame=pd.concat([frame] * required_rows, ignore_index=True)
     for key,value in changes.items(): frame[key]=value
     tables[table]=frame
     matches=[f for f in validate_rules(tables) if f.rule_id==rule]

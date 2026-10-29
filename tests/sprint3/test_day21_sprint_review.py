@@ -12,7 +12,7 @@ def make_db(tmp_path:Path):
         con.executemany("INSERT INTO companies VALUES (?,?)",[("A","Alpha"),("B","Beta"),("C","Gamma")])
         con.executemany("INSERT INTO financial_ratios VALUES (?,?,?,?,?)",[("A",2025,20,.5,90),("B",2025,25,.8,85),("C",2025,10,.2,70)])
         con.executemany("INSERT INTO peer_percentiles VALUES (?,?,?,?,?,?)",[("A","IT Services","roe",20,.5,2025),("B","IT Services","roe",25,1,2025),("C","IT Services","roe",10,0,2025)])
-        groups=[f"G{i}" for i in range(11)]
+        groups=[f"G{i}" for i in range(10)]
         for g in groups:
             for metric in ["roe","roce","net_profit_margin","debt_to_equity","free_cash_flow","pat_cagr_5yr","revenue_cagr_5yr","eps_cagr_5yr","interest_coverage","asset_turnover"]:
                 con.execute("INSERT INTO peer_percentiles VALUES (?,?,?,?,?,?)",("A",g,metric,1,.5,2025))

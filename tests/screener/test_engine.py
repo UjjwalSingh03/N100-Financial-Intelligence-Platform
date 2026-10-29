@@ -29,7 +29,7 @@ def sample_frame() -> pd.DataFrame:
             },
             {
                 "company_id": "C", "year": 2025, "return_on_equity_pct": 10,
-                "debt_to_equity": 0.2, "free_cash_flow_cr": 80,
+                "debt_to_equity": 2.0,  "free_cash_flow_cr": 80,
                 "revenue_cagr_5yr": 20, "pat_cagr_5yr": 20,
                 "operating_profit_margin_pct": 25, "interest_coverage": 3,
                 "asset_turnover": 2.5, "composite_quality_score": 95,

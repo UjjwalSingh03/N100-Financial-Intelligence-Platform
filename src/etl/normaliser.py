@@ -36,7 +36,7 @@ def normalize_year(value: object) -> int | None:
     if not text:
         return None
 
-    match = re.fullmatch(r"FY\\s*(\\d{2})", text)
+    match = re.fullmatch(r"FY\s*(\d{2})", text)
     if match:
         return 2000 + int(match.group(1))
 
@@ -53,6 +53,11 @@ def normalize_year(value: object) -> int | None:
     if match:
         end = int(match.group(2))
         return 2000 + end if end < 100 else end
+
+    month_match = re.fullmatch(r"(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*[-\s](\d{2}|\d{4})", text)
+    if month_match:
+        year = int(month_match.group(1))
+        return 2000 + year if year < 100 else year if 1900 <= year <= 2100 else None
 
     parsed = pd.to_datetime(text, errors="coerce")
     if not pd.isna(parsed) and 1900 <= parsed.year <= 2100:

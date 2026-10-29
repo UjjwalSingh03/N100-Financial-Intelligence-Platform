@@ -103,11 +103,45 @@ def load_features(db_path):
         else:
             base["fcf_cagr_5yr"] = base["fcf_cagr_5yr"].fillna(base["derived_fcf_cagr"])
         base = base.drop(columns="derived_fcf_cagr")
+    revenue_cagr = _revenue_cagr(pnl)
+    if not revenue_cagr.empty:
+        base = base.merge(
+            revenue_cagr.rename(columns={"revenue_cagr_5yr": "derived_revenue_cagr"}),
+            on="company_id", how="left", validate="one_to_one",
+        )
+        if "revenue_cagr_5yr" not in base:
+            base["revenue_cagr_5yr"] = base["derived_revenue_cagr"]
+        else:
+            base["revenue_cagr_5yr"] = base["revenue_cagr_5yr"].fillna(base["derived_revenue_cagr"])
+        base = base.drop(columns="derived_revenue_cagr")
     for feature in FEATURES:
         if feature not in base:
             base[feature] = np.nan
         base[feature] = pd.to_numeric(base[feature], errors="coerce").replace([np.inf, -np.inf], np.nan)
     return base.sort_values("company_id").reset_index(drop=True)
+
+
+def _revenue_cagr(pnl, years=5):
+    if pnl.empty or "sales" not in pnl:
+        return pd.DataFrame(columns=["company_id", "revenue_cagr_5yr"])
+    pnl = pnl.copy()
+    pnl["year"] = pd.to_numeric(pnl["year"], errors="coerce")
+    pnl["sales"] = pd.to_numeric(pnl["sales"], errors="coerce")
+    result = []
+    for company, group in pnl.dropna(subset=["year", "sales"]).groupby("company_id"):
+        group = group.sort_values("year").drop_duplicates("year", keep="last")
+        if group.empty:
+            continue
+        end = group.iloc[-1]
+        earlier = group[(group["year"] <= end["year"] - years) & (group["sales"] > 0)]
+        growth = np.nan
+        if not earlier.empty and end["sales"] > 0:
+            start = earlier.iloc[-1]
+            elapsed = end["year"] - start["year"]
+            if elapsed > 0:
+                growth = ((end["sales"] / start["sales"]) ** (1 / elapsed) - 1) * 100
+        result.append({"company_id": company, "revenue_cagr_5yr": growth})
+    return pd.DataFrame(result, columns=["company_id", "revenue_cagr_5yr"])
 
 
 def impute_features(frame):

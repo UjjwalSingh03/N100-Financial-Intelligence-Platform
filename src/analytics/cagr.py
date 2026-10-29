@@ -41,7 +41,8 @@ def calculate_cagr(start: float | None, end: float | None, n_years: int) -> CAGR
     if start == 0:
         return CAGRResult(None, "ZERO_BASE")
     if start > 0 and end > 0:
-        return CAGRResult(((end / start) ** (1 / n_years) - 1) * 100, None)
+        value = ((end / start) ** (1 / n_years) - 1) * 100
+        return CAGRResult(round(value, 12), None)
     if start > 0 and end < 0:
         return CAGRResult(None, "DECLINE_TO_LOSS")
     if start < 0 and end > 0:

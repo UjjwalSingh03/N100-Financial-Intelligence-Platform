@@ -30,9 +30,16 @@ def records(db, sql, params=()):
 def company(db, ticker):
     if "companies" not in tables(db):
         raise HTTPException(503, "Companies table unavailable")
+    identifier_columns = columns(db, "companies")
+    predicates = ["UPPER(id)=UPPER(?)", "UPPER(ticker)=UPPER(?)"]
+    params = [ticker, ticker]
+    for column in ("nse_code", "bse_code"):
+        if column in identifier_columns:
+            predicates.append(f"UPPER({column})=UPPER(?)")
+            params.append(ticker)
     row = db.execute(
-        "SELECT * FROM companies WHERE UPPER(id)=UPPER(?) OR UPPER(ticker)=UPPER(?) OR UPPER(nse_code)=UPPER(?) LIMIT 1",
-        (ticker, ticker, ticker)).fetchone()
+        f"SELECT * FROM companies WHERE {' OR '.join(predicates)} LIMIT 1",
+        tuple(params)).fetchone()
     if row is None:
         raise HTTPException(404, "Ticker not found")
     return dict(row)

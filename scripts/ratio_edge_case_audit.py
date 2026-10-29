@@ -14,7 +14,7 @@ from typing import Any
 from src.analytics.ratios import high_leverage_flag, return_on_capital_employed, return_on_equity
 
 LOG_PATH = Path("output/ratio_edge_cases.log")
-ROCE_THRESHOLD_PCT_POINTS = 5.0
+ROCE_THRESHOLD_PCT_POINTS = 4.0
 logger = logging.getLogger(__name__)
 
 
