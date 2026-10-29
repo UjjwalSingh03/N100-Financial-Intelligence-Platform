@@ -4,7 +4,8 @@ import argparse, math, sqlite3
 from pathlib import Path
 import pandas as pd
 
-THRESHOLD=60.0
+THRESHOLD = 60.0
+CONFIDENCE_THRESHOLD = THRESHOLD
 PRO_TEXT={
 "P01":"Consistently high return on equity above 20% demonstrates exceptional capital efficiency",
 "P02":"Strong free cash flow generation over 5 years signals healthy business fundamentals",
@@ -117,7 +118,7 @@ def rules(row,h,financial):
     if dy is not None and dy>2 and fcf is not None and fcf>0:add("pro","P08",PRO_TEXT["P08"],85)
     if epsc is not None and epsc>15:add("pro","P09",PRO_TEXT["P09"],conf(72,epsc-15))
     if trend_ok(h,"return_on_equity_pct",3,"up"):add("pro","P10",PRO_TEXT["P10"],82)
-    if rev is not None and pat is not None and rev>pat:add("pro","P11",PRO_TEXT["P11"],conf(68,rev-pat))
+    if rev is not None and pat is not None and pat>rev:add("pro","P11",PRO_TEXT["P11"],conf(68,pat-rev))
     debtc="borrowings" if "borrowings" in h else "total_debt_cr"
     if len(h)>=2 and trend_ok(h,"total_assets",2,"up") and trend_ok(h,debtc,2,"down"):add("pro","P12",PRO_TEXT["P12"],82)
     if not financial and de is not None and de>2:add("con","C01",CON_TEXT["C01"].format(de=de),conf(72,(de-2)*8))
@@ -137,6 +138,19 @@ def rules(row,h,financial):
     if ebitda>0 and netdebt>3*ebitda:add("con","C11",CON_TEXT["C11"],conf(78,(netdebt/ebitda-3)*5))
     if rev is not None and rev<5:add("con","C12",CON_TEXT["C12"],conf(75,(5-rev)*3))
     return r
+
+
+def generate_for_company(row, history_frame=None, financial=False):
+    """Generate rule results for an in-memory company row."""
+    if history_frame is None:
+        history_frame = pd.DataFrame()
+    elif not isinstance(history_frame, pd.DataFrame):
+        history_frame = pd.DataFrame(history_frame)
+    if not isinstance(row, pd.Series):
+        row = pd.Series(row)
+    history_frame = history_frame.copy()
+    return rules(row, history_frame, bool(financial))
+
 
 def generate(db_path:Path,output:Path,strict=True):
     if not db_path.exists():raise FileNotFoundError(db_path)

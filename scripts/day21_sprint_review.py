@@ -26,8 +26,7 @@ def _check(name, condition, detail, blocked=False):
 def check_dq_tests(command):
     try: p=subprocess.run(command,shell=True,text=True,capture_output=True)
     except OSError as e: return Check("DQ unit tests",BLOCKED,f"Could not start test command: {e}")
-    output=(p.stdout+"
-"+p.stderr).strip()
+    output=(p.stdout+"\n"+p.stderr).strip()
     ok=p.returncode==0 and "failed" not in output.lower()
     return _check("DQ unit tests",ok,"DQ validator tests passed with zero failures." if ok else f"Test command failed (exit {p.returncode}). {output[-1500:]}")
 

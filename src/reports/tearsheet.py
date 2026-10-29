@@ -29,7 +29,8 @@ PATTERNS = ("Reinvestor", "Shareholder Returns", "Liquidating Assets", "Distress
 def _rows(con, table, ticker):
     if not con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
         return []
-    order = "year" if table != "prosandcons" else "id"\n    return [dict(r) for r in con.execute(f'SELECT * FROM "{table}" WHERE company_id=? ORDER BY {order}', (ticker,))]
+    order = "year" if table != "prosandcons" else "id"
+    return [dict(r) for r in con.execute(f'SELECT * FROM "{table}" WHERE company_id=? ORDER BY {order}', (ticker,))]
 
 
 def _num(v):
